@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     await admin.rpc('refund_ai_analysis', { p_user: user.id });
     if (err instanceof Anthropic.AuthenticationError) {
-      console.error('Anthropic key missing or wrong');
+      console.error(`Anthropic key missing or wrong (${err.status}):`, err.message);
     } else if (err instanceof Anthropic.RateLimitError) {
       console.error('Anthropic rate limit');
     } else if (err instanceof Anthropic.APIError) {
