@@ -13,10 +13,11 @@
 It gets its own icon and opens full screen like a normal app. You can log food by hand as a guest. Photo estimates need a free account and an invite code (they're paid for per photo, so they're invite-only for now).
 
 <p>
-  <img src="docs/screenshots/today.jpg" width="200" alt="Today screen: calorie ring with 880 cal left, macro bars and today's meals" />
-  <img src="docs/screenshots/review.jpg" width="200" alt="Review screen: editable food name, calories, protein, carbs, fat and servings" />
-  <img src="docs/screenshots/history.jpg" width="200" alt="History calendar: days on target in aqua, days over in orange" />
-  <img src="docs/screenshots/progress.jpg" width="200" alt="Progress screen: weight trend line and last 7 days of calories" />
+  <img src="docs/screenshots/today.jpg" width="180" alt="Today screen: periwinkle calorie ring with 380 cal left, eaten/goal stats and macro bars" />
+  <img src="docs/screenshots/review.jpg" width="180" alt="Add food screen: editable name, calories, protein, carbs, fat and servings" />
+  <img src="docs/screenshots/history.jpg" width="180" alt="History calendar: days on target in sage green, days over in peach, plus the day's summary" />
+  <img src="docs/screenshots/meals.jpg" width="180" alt="A day's food grouped into Breakfast, Lunch and Snack cards with calories and macros" />
+  <img src="docs/screenshots/progress.jpg" width="180" alt="Progress screen: weight trend line and the last 7 days of calories" />
 </p>
 
 ## Features
@@ -25,9 +26,9 @@ It gets its own icon and opens full screen like a normal app. You can log food b
 - **Barcode lookup.** Snap the barcode on a packaged food and Forkcast reads it and pulls the exact label nutrition from [Open Food Facts](https://world.openfoodfacts.org), a free public food database. No barcode match? You get the AI estimate instead.
 - **Animated launch.** The logo's ring fills up around the fork every time the app opens.
 - **A daily target made for you.** A quick setup asks your age, sex, height, weight, activity and goal, then works out your calories with the Mifflin-St Jeor equation and splits them into protein, carbs and fat.
-- **Today at a glance.** A calorie ring that fills as you eat (and turns orange if you go over), macro bars, and a nudge like *"You have 880 cal left today."*
+- **Today at a glance.** A calorie ring that fills as you eat (green or peach depending on whether your goal is to gain or lose), macro bars, and a nudge like *"You have 880 cal left today."*
 - **Add without a photo.** Type it in, or tap one of your recent foods to fill everything in at once.
-- **History calendar.** Every day is colored: aqua for on target, orange for over. Tap a day to see what you ate.
+- **History calendar.** Every day is colored by how it went for *your* goal: when losing, staying under is green; when gaining, going over is green. Tap a day for a summary card and its food grouped into Breakfast, Lunch, Snack and Dinner.
 - **Progress.** Log your weight and see your trend line, plus a 7-day calorie chart against your goal.
 - **Streaks.** 🔥 Days in a row with food logged, so there's a reason to come back tomorrow.
 - **Accounts and cloud backup (optional).** Sign up with email and your log is backed up and synced across devices. There's also forgot password and delete account.
