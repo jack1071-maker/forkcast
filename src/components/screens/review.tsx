@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Field, Headline, num, s } from '@/components/bits';
-import { analyzePhoto } from '@/lib/analyze';
+import { AnalyzeError, analyzePhoto } from '@/lib/analyze';
 import { Entry, Macros } from '@/lib/food';
 import { C, R, tapBuzz } from '@/lib/ui';
 
@@ -30,6 +30,7 @@ export function Review({
   const [step, setStep] = useState<Step>(mode === 'photo' ? 'pick' : 'edit');
   const [photo, setPhoto] = useState<string | null>(null);
   const [demo, setDemo] = useState(false);
+  const [lowConfidence, setLowConfidence] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
@@ -52,6 +53,7 @@ export function Review({
 
   const pick = async (useCamera: boolean) => {
     setError(null);
+    let uri: string;
     try {
       if (useCamera && Platform.OS !== 'web') {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -60,20 +62,28 @@ export function Review({
           return;
         }
       }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.5, base64: true };
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.8 };
       const res = useCamera
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options);
       if (res.canceled || !res.assets?.[0]) return;
-      const asset = res.assets[0];
-      setPhoto(asset.uri);
-      setStep('analyzing');
-      const guess = await analyzePhoto(asset.base64);
-      fill(guess);
-      setDemo(guess.demo);
-      setStep('edit');
+      uri = res.assets[0].uri;
     } catch {
       setError("Couldn't open the camera or photos. Try again, or add the food without a photo.");
+      return;
+    }
+
+    setPhoto(uri);
+    setStep('analyzing');
+    try {
+      const guess = await analyzePhoto(uri);
+      fill(guess);
+      setDemo(guess.demo);
+      setLowConfidence(guess.confidence === 'low');
+      setStep('edit');
+    } catch (e) {
+      setPhoto(null);
+      setError(e instanceof AnalyzeError ? e.message : 'Something went wrong. Please try again.');
       setStep('pick');
     }
   };
@@ -111,7 +121,15 @@ export function Review({
           </Card>
           <Button title="Take a photo" onPress={() => pick(true)} />
           <Button title="Choose from photos" kind="secondary" onPress={() => pick(false)} />
-          {error ? <Text style={st.error}>{error}</Text> : null}
+          {error ? (
+            <>
+              <Text style={st.error}>{error}</Text>
+              <Button title="Enter it by hand" kind="ghost" onPress={() => setStep('edit')} />
+            </>
+          ) : null}
+          <Text style={st.note}>
+            Photos are sent to an AI service to estimate the nutrition. Forkcast doesn&apos;t keep them.
+          </Text>
         </>
       ) : null}
 
@@ -127,8 +145,12 @@ export function Review({
           {demo ? (
             <View style={st.demo}>
               <Text style={st.demoText}>
-                Demo estimate: the real AI comes next. Edit anything that looks wrong.
+                Sample estimate: the AI isn&apos;t connected in this copy. Edit anything that looks wrong.
               </Text>
+            </View>
+          ) : lowConfidence ? (
+            <View style={st.demo}>
+              <Text style={st.demoText}>Rough guess: this one was hard to see. Check the numbers.</Text>
             </View>
           ) : null}
 
@@ -226,6 +248,7 @@ const st = StyleSheet.create({
   close: { color: C.muted, fontSize: 24, padding: 4 },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: R.lg, backgroundColor: C.card },
   error: { color: C.danger, fontSize: 15, textAlign: 'center' },
+  note: { color: C.muted, fontSize: 12, textAlign: 'center' },
   demo: { backgroundColor: C.accentSoft, borderRadius: R.sm, padding: 12 },
   demoText: { color: C.accent, fontSize: 14, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
