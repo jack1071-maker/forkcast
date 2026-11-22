@@ -1,8 +1,9 @@
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Headline, MacroBar, Ring, s } from '@/components/bits';
-import { CameraIcon, CloseIcon, FlameIcon, mealFor } from '@/components/icons';
-import { AppState, Entry, dayKey, entriesOn, logStreak, totals } from '@/lib/food';
+import { CameraIcon, FlameIcon } from '@/components/icons';
+import { MealList } from '@/components/meals';
+import { AppState, GoalType, dayKey, dayResult, entriesOn, logStreak, totals } from '@/lib/food';
 import { C, F, R } from '@/lib/ui';
 
 export function Today({
@@ -22,6 +23,11 @@ export function Today({
   const t = totals(list);
   const left = goals.calories - t.calories;
   const over = left < 0;
+  const goalType = state.profile?.goal ?? 'lose';
+  const result = dayResult(t.calories, goals.calories, goalType, true);
+  // Red only when the day went the wrong way for your goal; green once a gain/maintain goal is reached.
+  const ringColor = result === 'missed' ? C.over : result === 'good' && goalType !== 'lose' ? C.good : C.ring;
+  const pctColor = result === 'missed' ? C.overText : result === 'good' && t.calories > 0 ? C.goodText : C.text;
   const streak = logStreak(state);
   const pct = Math.round((t.calories / goals.calories) * 100);
   const dateLabel = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
@@ -44,16 +50,16 @@ export function Today({
 
       <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
         <Text style={st.label}>Calories</Text>
-        <Ring progress={t.calories / goals.calories} color={over ? C.over : C.good} size={220} stroke={14}>
+        <Ring progress={t.calories / goals.calories} color={ringColor} size={220} stroke={14}>
           <Text style={st.big}>{Math.abs(left).toLocaleString()}</Text>
-          <Text style={st.bigUnit}>{over ? 'CAL OVER' : 'CAL LEFT'}</Text>
+          <Text style={st.bigUnit}>{!over ? 'CAL LEFT' : goalType === 'gain' ? 'CAL ABOVE GOAL' : 'CAL OVER'}</Text>
         </Ring>
         <View style={st.statsRow}>
           <Stat value={t.calories.toLocaleString()} label="Eaten" />
           <View style={st.divider} />
           <Stat value={goals.calories.toLocaleString()} label="Goal" />
           <View style={st.divider} />
-          <Stat value={`${pct}%`} label="Of goal" color={over ? C.over : C.good} />
+          <Stat value={`${pct}%`} label="Of goal" color={pctColor} />
         </View>
       </Card>
 
@@ -66,7 +72,7 @@ export function Today({
         </View>
       </Card>
 
-      <Text style={st.nudge}>{nudge(list.length, left)}</Text>
+      <Text style={st.nudge}>{nudge(list.length, left, goalType)}</Text>
 
       <Button title="Snap your food" icon={(c) => <CameraIcon size={20} color={c} />} onPress={onSnap} />
       <Button title="Add without a photo" kind="secondary" onPress={onManual} />
@@ -75,7 +81,7 @@ export function Today({
       {list.length === 0 ? (
         <Text style={s.muted}>Nothing logged yet. Your first meal starts the day&apos;s count.</Text>
       ) : (
-        list.map((e) => <FoodRow key={e.id} entry={e} onDelete={() => confirmDelete(e, onDelete)} />)
+        <MealList entries={list} onDelete={onDelete} />
       )}
     </ScrollView>
   );
@@ -90,72 +96,16 @@ function Stat({ value, label, color = C.text }: { value: string; label: string; 
   );
 }
 
-function nudge(count: number, left: number) {
+function nudge(count: number, left: number, goal: GoalType) {
   if (count === 0) return 'Log your first meal to keep your streak going.';
-  if (left < 0) return `You're ${Math.abs(left)} cal over today. Tomorrow's a fresh start.`;
-  if (left < 150) return 'Right on target. Nicely done.';
-  return `You have ${left.toLocaleString()} cal left today.`;
-}
-
-function confirmDelete(e: Entry, onDelete: (id: string) => void) {
-  const msg = `Remove "${e.name}" from today?`;
-  // Alert with buttons doesn't exist on the web, so use the browser's confirm box there.
-  if (Platform.OS === 'web') {
-    if (window.confirm(msg)) onDelete(e.id);
-    return;
+  const n = Math.abs(left).toLocaleString();
+  if (goal === 'gain') {
+    if (left <= 0) return `Goal reached, ${n} cal above it. Great for gaining.`;
+    return `Eat ${n} more cal to hit your gain goal today.`;
   }
-  Alert.alert('Remove food', msg, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Remove', style: 'destructive', onPress: () => onDelete(e.id) },
-  ]);
-}
-
-/** One logged food: meal-time icon, name, macros and calories. */
-export function FoodRow({ entry, onDelete }: { entry: Entry; onDelete?: () => void }) {
-  const when = new Date(entry.time);
-  const time = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const { label, Icon } = mealFor(when);
-  return (
-    <Pressable
-      onLongPress={onDelete}
-      accessibilityHint={onDelete ? 'Long press to remove' : undefined}
-      style={st.row}>
-      <View style={st.iconTile} accessibilityLabel={label}>
-        <Icon size={20} color={C.text} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={st.rowName} numberOfLines={1}>
-          {entry.name}
-        </Text>
-        <Text style={st.rowSub}>
-          {label.toUpperCase()} · {time}
-        </Text>
-        <View style={st.macroDots}>
-          <Dot color={C.protein} text={`${entry.protein}P`} />
-          <Dot color={C.carbs} text={`${entry.carbs}C`} />
-          <Dot color={C.fat} text={`${entry.fat}F`} />
-        </View>
-      </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={st.rowKcal}>{entry.calories}</Text>
-        <Text style={st.rowUnit}>CAL</Text>
-      </View>
-      {onDelete ? (
-        <Pressable onPress={onDelete} hitSlop={10} accessibilityLabel={`Remove ${entry.name}`} style={{ paddingLeft: 2 }}>
-          <CloseIcon size={16} color={C.muted} />
-        </Pressable>
-      ) : null}
-    </Pressable>
-  );
-}
-
-function Dot({ color, text }: { color: string; text: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-      <Text style={st.dotText}>{text}</Text>
-    </View>
-  );
+  if (Math.abs(left) < 150) return 'Right on target. Nicely done.';
+  if (left < 0) return `You're ${n} cal over today. Tomorrow's a fresh start.`;
+  return `You have ${n} cal left today.`;
 }
 
 const st = StyleSheet.create({
@@ -191,28 +141,4 @@ const st = StyleSheet.create({
   statLabel: { color: C.muted, fontFamily: F.semi, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', marginTop: 2 },
   macros: { flexDirection: 'row', gap: 16, alignSelf: 'stretch' },
   nudge: { color: C.muted, fontSize: 14, fontFamily: F.medium, textAlign: 'center' },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: C.card,
-    borderRadius: R.md,
-    borderWidth: 1,
-    borderColor: '#1A1B1F',
-    padding: 14,
-  },
-  iconTile: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: C.cardHi,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowName: { color: C.text, fontSize: 15, fontFamily: F.semi },
-  rowSub: { color: C.muted, fontFamily: F.semi, fontSize: 10, letterSpacing: 1, marginTop: 3 },
-  macroDots: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  dotText: { color: C.muted, fontFamily: F.medium, fontSize: 12 },
-  rowKcal: { color: C.text, fontSize: 24, fontFamily: F.head, lineHeight: 26 },
-  rowUnit: { color: C.muted, fontFamily: F.headSemi, fontSize: 11, letterSpacing: 1 },
 });

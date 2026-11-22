@@ -184,7 +184,7 @@ export function num(v: string) {
 
 export const s = StyleSheet.create({
   headline: { fontFamily: F.head, color: C.text, letterSpacing: 1, textTransform: 'uppercase' },
-  card: { backgroundColor: C.card, borderRadius: R.lg, padding: 18, gap: 12, borderWidth: 1, borderColor: '#1A1B1F' },
+  card: { backgroundColor: C.card, borderRadius: R.lg, padding: 18, gap: 12, borderWidth: 1, borderColor: C.line },
   macroLabel: { color: C.muted, fontSize: 11, fontFamily: F.semi, letterSpacing: 1.2, textTransform: 'uppercase' },
   macroValue: { color: C.text, fontSize: 20, fontFamily: F.head, letterSpacing: 0.3 },
   macroGoal: { color: C.muted, fontFamily: F.headSemi, fontSize: 14 },

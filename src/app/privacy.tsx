@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { C, F, R } from '@/lib/ui';
@@ -74,7 +74,7 @@ export default function PrivacyPolicy() {
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={Platform.OS === 'web' ? [] : undefined}>
       <ScrollView contentContainerStyle={styles.wrap}>
         <Pressable onPress={goBack} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Card, Headline, s } from '@/components/bits';
-import { FoodRow } from '@/components/screens/today';
-import { AppState, dayKey, entriesOn, parseDay, totals } from '@/lib/food';
+import { Card, Headline, MacroBar, s } from '@/components/bits';
+import { MealList } from '@/components/meals';
+import { AppState, DayResult, GoalType, Macros, dayKey, dayResult, entriesOn, parseDay, totals } from '@/lib/food';
 import { ChevronIcon } from '@/components/icons';
-import { C, F, tapBuzz } from '@/lib/ui';
+import { C, F, resultColor, tapBuzz } from '@/lib/ui';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -18,6 +18,7 @@ export function History({ state }: { state: AppState }) {
   });
   const [selected, setSelected] = useState(today);
   const goal = state.goals?.calories ?? 2000;
+  const goalType = state.profile?.goal ?? 'lose';
 
   // Calories per day, so each calendar square knows its color.
   const perDay = new Map<string, number>();
@@ -67,7 +68,7 @@ export function History({ state }: { state: AppState }) {
           {cells.map((c, i) => {
             if (!c) return <View key={i} style={st.cell} />;
             const cal = perDay.get(c);
-            const bg = cal == null ? 'transparent' : cal > goal * 1.05 ? C.over : C.good;
+            const bg = resultColor(dayResult(cal ?? 0, goal, goalType, c === today));
             const future = c > today;
             const isSel = c === selected;
             return (
@@ -86,7 +87,7 @@ export function History({ state }: { state: AppState }) {
                     c === today && cal == null && { borderColor: C.text, borderWidth: 1.5 },
                     isSel && { borderColor: C.text, borderWidth: 2 },
                   ]}>
-                  <Text style={[st.dayNum, cal != null && { color: C.onAccent }, future && { opacity: 0.3 }]}>
+                  <Text style={[st.dayNum, cal != null && { color: C.text }, future && { opacity: 0.3 }]}>
                     {parseDay(c).getDate()}
                   </Text>
                 </View>
@@ -96,27 +97,86 @@ export function History({ state }: { state: AppState }) {
         </View>
         <View style={st.legend}>
           <Legend color={C.good} label="On target" />
-          <Legend color={C.over} label="Over" />
+          <Legend color={C.over} label={goalType === 'gain' ? 'Under' : goalType === 'lose' ? 'Over' : 'Off target'} />
+          <Legend color={C.ring} label="In progress" />
           <Text style={s.muted}>{loggedThisMonth} day{loggedThisMonth === 1 ? '' : 's'} logged</Text>
         </View>
       </Card>
 
       <Text style={st.section}>
-        {parseDay(selected).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}
+        {parseDay(selected).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
       </Text>
       {list.length === 0 ? (
-        <Text style={s.muted}>Nothing logged this day.</Text>
+        <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
+          <Text style={s.muted}>Nothing logged this day.</Text>
+        </Card>
       ) : (
         <>
-          <Text style={s.body}>
-            {t.calories.toLocaleString()} / {goal.toLocaleString()} cal · P {t.protein} · C {t.carbs} · F {t.fat}
-          </Text>
-          {list.map((e) => (
-            <FoodRow key={e.id} entry={e} />
-          ))}
+          <DaySummary
+            totals={t}
+            goals={state.goals ?? { calories: goal, protein: 0, carbs: 0, fat: 0 }}
+            result={dayResult(t.calories, goal, goalType, selected === today)}
+            goalType={goalType}
+            items={list.length}
+          />
+          <MealList entries={list} />
         </>
       )}
     </ScrollView>
+  );
+}
+
+/** The selected day at a glance: calories vs goal with a result badge, then each macro vs its target. */
+function DaySummary({
+  totals: t,
+  goals,
+  result,
+  goalType,
+  items,
+}: {
+  totals: Macros;
+  goals: Macros;
+  result: DayResult;
+  goalType: GoalType;
+  items: number;
+}) {
+  const badge =
+    result === 'good'
+      ? { text: 'On target', bg: C.good, fg: C.goodText }
+      : result === 'missed'
+        ? { text: goalType === 'gain' ? 'Under goal' : goalType === 'lose' ? 'Over goal' : 'Off target', bg: C.over, fg: C.overText }
+        : { text: 'In progress', bg: C.ring, fg: C.text };
+  const diff = t.calories - goals.calories;
+  return (
+    <Card>
+      <View style={st.sumTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.fieldLabel}>Calories</Text>
+          <Text style={st.sumBig}>
+            {t.calories.toLocaleString()}
+            <Text style={st.sumGoal}> / {goals.calories.toLocaleString()} CAL</Text>
+          </Text>
+        </View>
+        <View style={[st.badge, { backgroundColor: badge.bg + '55' }]}>
+          <Text style={[st.badgeText, { color: badge.fg }]}>{badge.text}</Text>
+        </View>
+      </View>
+      <View style={st.track}>
+        <View
+          style={[st.fill, { width: `${Math.min(1, t.calories / Math.max(1, goals.calories)) * 100}%`, backgroundColor: resultColor(result) }]}
+        />
+      </View>
+      <Text style={s.muted}>
+        {diff === 0 ? 'Exactly on goal' : `${Math.abs(diff).toLocaleString()} cal ${diff > 0 ? 'above' : 'below'} goal`} · {items} food
+        {items === 1 ? '' : 's'}
+      </Text>
+      <View style={st.divider} />
+      <View style={st.macros}>
+        <MacroBar label="Protein" value={t.protein} goal={goals.protein} color={C.protein} />
+        <MacroBar label="Carbs" value={t.carbs} goal={goals.carbs} color={C.carbs} />
+        <MacroBar label="Fat" value={t.fat} goal={goals.fat} color={C.fat} />
+      </View>
+    </Card>
   );
 }
 
@@ -140,5 +200,14 @@ const st = StyleSheet.create({
   dot: { width: '82%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   dayNum: { color: C.text, fontSize: 14, fontFamily: F.bold },
   legend: { flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' },
-  section: { color: C.muted, fontSize: 13, fontFamily: F.bold, letterSpacing: 1, marginTop: 4 },
+  section: { color: C.muted, fontSize: 12, fontFamily: F.semi, letterSpacing: 1.4, marginTop: 6 },
+  sumTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  sumBig: { color: C.text, fontFamily: F.head, fontSize: 36, marginTop: 2 },
+  sumGoal: { color: C.muted, fontFamily: F.headSemi, fontSize: 16, letterSpacing: 0.5 },
+  badge: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 },
+  badgeText: { fontFamily: F.semi, fontSize: 12, letterSpacing: 0.4 },
+  track: { height: 6, borderRadius: 3, backgroundColor: C.line, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3 },
+  divider: { height: 1, backgroundColor: C.line, marginVertical: 2 },
+  macros: { flexDirection: 'row', gap: 16 },
 });

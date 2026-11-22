@@ -2,29 +2,41 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
 /**
- * Forkcast's look: pure black, graphite cards, ice-white text and buttons.
- * Color is saved for the data itself: green = on target, red = over, one color per macro.
+ * Forkcast's look (inspired by Ro's calm, light style): warm off-white background, white cards,
+ * near-black text and buttons, and soft pastels for the data.
  */
 export const C = {
-  bg: '#000000',
-  card: '#111214',
-  cardHi: '#1C1D21',
-  text: '#FFFFFF',
-  muted: '#8B8F97',
-  line: '#26282D',
+  bg: '#F6F5F2',
+  card: '#FFFFFF',
+  /** Inputs, icon tiles, secondary buttons. */
+  cardHi: '#F0EEEA',
+  text: '#141414',
+  muted: '#6F6C67',
+  /** Borders and empty ring/bar tracks. */
+  line: '#E7E4DF',
   /** Buttons, selected chips, links. */
-  accent: '#FFFFFF',
-  accentSoft: '#1C1D21',
-  /** Text on top of an accent (white) button. */
-  onAccent: '#000000',
-  /** On target (rings, calendar days, bars). */
-  good: '#2FD573',
-  over: '#FF5A5F',
-  danger: '#FF5A5F',
-  protein: '#5AA9FF',
-  carbs: '#FFB547',
-  fat: '#B98CFF',
+  accent: '#141414',
+  accentSoft: '#EFEDE8',
+  /** Text on top of an accent (black) button. */
+  onAccent: '#FFFFFF',
+  /** The calorie ring. */
+  ring: '#8E9FE0',
+  /** On target (calendar days, bars). */
+  good: '#9CCBA6',
+  goodText: '#3F7A4E',
+  /** Over the goal. */
+  over: '#F4A486',
+  overText: '#B5563A',
+  danger: '#C44D36',
+  protein: '#8FB8EE',
+  carbs: '#F2CC6B',
+  fat: '#C3A9EE',
 };
+
+/** Color for a day's result (see dayResult in lib/food.ts). */
+export function resultColor(result: 'good' | 'missed' | 'pending' | 'empty') {
+  return result === 'good' ? C.good : result === 'missed' ? C.over : result === 'pending' ? C.ring : 'transparent';
+}
 
 /**
  * Fonts (loaded in app/_layout.tsx). Custom fonts ignore `fontWeight`, so each weight is its own family.

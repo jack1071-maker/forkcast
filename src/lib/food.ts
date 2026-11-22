@@ -67,6 +67,24 @@ export function computeGoals(p: Profile): Macros {
   return { calories, protein, carbs, fat };
 }
 
+/**
+ * Did this day go the way the goal wants?
+ * - lose: staying at or under the target is good (up to 5% over is close enough).
+ * - gain: reaching or beating the target is good (within 5% short is close enough).
+ * - maintain: within 10% either side is good.
+ * Today isn't finished, so falling short today is 'pending' rather than a miss.
+ */
+export type DayResult = 'good' | 'missed' | 'pending' | 'empty';
+
+export function dayResult(calories: number, goal: number, type: GoalType, isToday = false): DayResult {
+  if (calories <= 0 || goal <= 0) return 'empty';
+  const r = calories / goal;
+  const ok = type === 'lose' ? r <= 1.05 : type === 'gain' ? r >= 0.95 : r >= 0.9 && r <= 1.1;
+  if (ok) return 'good';
+  const short = type === 'gain' ? r < 0.95 : type === 'maintain' && r < 0.9;
+  return isToday && short ? 'pending' : 'missed';
+}
+
 export function totals(entries: Entry[]): Macros {
   return entries.reduce(
     (t, e) => ({

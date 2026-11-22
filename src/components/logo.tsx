@@ -38,7 +38,18 @@ function Fork({ color }: { color: string }) {
 }
 
 /** The logo at any size. `ring` is how full the ring is (0 to 1; the real logo is 0.75). */
-export function Logo({ size = 120, ring = 0.75, color = C.text }: { size?: number; ring?: number; color?: string }) {
+export function Logo({
+  size = 120,
+  ring = 0.75,
+  color = C.text,
+  ringColor = C.ring,
+}: {
+  size?: number;
+  ring?: number;
+  /** The fork. */
+  color?: string;
+  ringColor?: string;
+}) {
   return (
     <Svg width={size} height={size} viewBox="0 0 1024 1024">
       <Circle cx={CENTER} cy={CENTER} r={RING_R} stroke={C.line} strokeWidth={RING_W} fill="none" />
@@ -47,7 +58,7 @@ export function Logo({ size = 120, ring = 0.75, color = C.text }: { size?: numbe
           cx={CENTER}
           cy={CENTER}
           r={RING_R}
-          stroke={color}
+          stroke={ringColor}
           strokeWidth={RING_W}
           fill="none"
           strokeDasharray={`${CIRC} ${CIRC}`}
@@ -72,7 +83,7 @@ const step = (ms: number, start: number, end: number) => easeOut(clamp((ms - sta
 const TOTAL_MS = 1900;
 
 /**
- * Plays once when the app opens: on black, the ring fills around the fork like a day of eating,
+ * Plays once when the app opens: on the plain background, the ring fills around the fork like a day of eating,
  * "FORKCAST" rises in underneath, then the whole thing fades away to reveal the app.
  */
 export function LaunchAnimation({ onShown, onDone }: { onShown?: () => void; onDone: () => void }) {

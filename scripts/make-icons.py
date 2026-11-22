@@ -1,4 +1,4 @@
-"""Draws Forkcast's app icon (black square, white 3/4 ring, white fork) and writes every size the app needs.
+"""Draws Forkcast's app icon (off-white square, periwinkle 3/4 ring, near-black fork) and writes every size the app needs.
 
 Run from the project folder:  python scripts/make-icons.py
 """
@@ -6,10 +6,10 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-NAVY = (0, 0, 0, 255)  # C.bg (black)
-AQUA = (255, 255, 255, 255)  # ring color (white)
-LINE = (38, 40, 45, 255)  # C.line
-WHITE = (255, 255, 255, 255)
+NAVY = (246, 245, 242, 255)  # C.bg (warm off-white)
+AQUA = (142, 159, 224, 255)  # C.ring (periwinkle)
+LINE = (231, 228, 223, 255)  # C.line
+WHITE = (20, 20, 20, 255)  # fork color (C.text)
 
 ROOT = Path(__file__).resolve().parent.parent
 S = 1024  # draw big, then shrink for smooth edges

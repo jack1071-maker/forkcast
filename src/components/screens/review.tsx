@@ -130,7 +130,7 @@ export function Review({
     <ScrollView contentContainerStyle={st.wrap} keyboardShouldPersistTaps="handled">
       <View style={st.top}>
         <Headline size={30}>{mode === 'photo' ? 'SNAP YOUR FOOD' : 'ADD FOOD'}</Headline>
-        <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">
+        <Pressable onPress={onClose} hitSlop={16} accessibilityLabel="Close" style={st.closeBtn}>
           <CloseIcon size={22} color={C.muted} />
         </Pressable>
       </View>
@@ -208,7 +208,7 @@ export function Review({
             </View>
           ) : match ? (
             <View style={[st.demo, { flexDirection: 'row', gap: 10, alignItems: 'center' }]}>
-              <BarcodeIcon size={20} color={C.good} />
+              <BarcodeIcon size={20} color={C.goodText} />
               <Text style={[st.demoText, { flex: 1 }]}>
                 Barcode {match.barcode} found in the Open Food Facts database. Label values for {match.serving}.
               </Text>
@@ -308,6 +308,7 @@ function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
 
 
 const st = StyleSheet.create({
+  closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   close: { color: C.muted, fontFamily: F.body, fontSize: 24, padding: 4 },

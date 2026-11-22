@@ -4,8 +4,8 @@ import { Alert, LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, 
 import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
 
 import { Button, Card, Field, Headline, num, s } from '@/components/bits';
-import { AppState, addDays, dayKey, entriesOn, kgToLb, lbToKg, parseDay, showWeight, totals } from '@/lib/food';
-import { C, F } from '@/lib/ui';
+import { addDays, AppState, dayKey, dayResult, entriesOn, GoalType, kgToLb, lbToKg, parseDay, showWeight, totals } from '@/lib/food';
+import { C, F, resultColor } from '@/lib/ui';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
@@ -141,7 +141,7 @@ export function Progress({
 
       <Card>
         <Text style={s.fieldLabel}>LAST 7 DAYS</Text>
-        <WeekBars week={week} goal={goal} width={width} />
+        <WeekBars week={week} goal={goal} goalType={state.profile?.goal ?? 'lose'} width={width} />
         <Text style={s.muted}>
           {logged.length ? `Average ${avg.toLocaleString()} cal on days you logged (goal ${goal.toLocaleString()}).` : 'No food logged this week yet.'}
         </Text>
@@ -219,7 +219,17 @@ function WeightChart({ values, width }: { values: number[]; width: number }) {
   );
 }
 
-function WeekBars({ week, goal, width }: { week: { day: string; kcal: number }[]; goal: number; width: number }) {
+function WeekBars({
+  week,
+  goal,
+  goalType,
+  width,
+}: {
+  week: { day: string; kcal: number }[];
+  goal: number;
+  goalType: GoalType;
+  width: number;
+}) {
   const h = 120;
   const max = Math.max(goal * 1.2, ...week.map((d) => d.kcal));
   const slot = width / 7;
@@ -237,7 +247,7 @@ function WeekBars({ week, goal, width }: { week: { day: string; kcal: number }[]
               width={slot * 0.6}
               height={Math.max(bh, 2)}
               rx={6}
-              fill={d.kcal === 0 ? C.line : d.kcal > goal * 1.05 ? C.over : C.good}
+              fill={d.kcal === 0 ? C.line : resultColor(dayResult(d.kcal, goal, goalType, d.day === dayKey()))}
             />
           );
         })}

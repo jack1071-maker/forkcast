@@ -95,14 +95,14 @@ export function AuthScreen({
     <ScrollView contentContainerStyle={st.wrap} keyboardShouldPersistTaps="handled">
       <View style={st.top}>
         <Headline size={30}>{TITLES[mode]}</Headline>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityLabel="Close">
+        <Pressable onPress={onBack} hitSlop={16} accessibilityLabel="Close" style={st.closeBtn}>
           <CloseIcon size={22} color={C.muted} />
         </Pressable>
       </View>
       <Text style={s.muted}>{LEADS[mode]}</Text>
 
       {hasLocalData && signingUp ? (
-        <Notice Icon={CheckIcon} color={C.good} text="The food already logged on this device will be saved to your new account." />
+        <Notice Icon={CheckIcon} color={C.goodText} text="The food already logged on this device will be saved to your new account." />
       ) : null}
       {hasLocalData && mode === 'signIn' ? (
         <Notice Icon={AlertIcon} color={C.carbs} text="Signing in replaces what's on this device with what's saved in your account." />
@@ -227,6 +227,7 @@ function Notice({ Icon, color, text }: { Icon: (p: { size?: number; color?: stri
 }
 
 const st = StyleSheet.create({
+  closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
   notice: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: C.card, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.line },
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -240,5 +241,5 @@ const st = StyleSheet.create({
     fontSize: 17,
   },
   error: { color: C.danger, fontFamily: F.body, fontSize: 15, textAlign: 'center' },
-  info: { color: C.good, fontFamily: F.medium, fontSize: 14, textAlign: 'center' },
+  info: { color: C.goodText, fontFamily: F.medium, fontSize: 14, textAlign: 'center' },
 });

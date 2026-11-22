@@ -30,8 +30,8 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Light status bar icons (time, battery) so they show up on black. */}
-      <StatusBar style="light" />
+      {/* Dark status bar icons (time, battery) on the light background. */}
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }} />
       {launching ? (
         <LaunchAnimation onShown={() => SplashScreen.hideAsync().catch(() => {})} onDone={() => setLaunching(false)} />

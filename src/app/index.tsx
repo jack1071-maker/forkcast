@@ -357,9 +357,15 @@ export default function App() {
   );
 }
 
+/**
+ * Phones: keep clear of the notch and home bar. Web: the page itself already reserves that space
+ * (see scripts/add-web-tags.js), so padding here too would double it.
+ */
+const SAFE_EDGES = Platform.OS === 'web' ? ([] as const) : (['top', 'left', 'right', 'bottom'] as const);
+
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <SafeAreaView style={st.fill} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={st.fill} edges={SAFE_EDGES}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={st.column}>{children}</View>
       </KeyboardAvoidingView>
@@ -401,7 +407,7 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#16171A',
+    borderTopColor: C.line,
     backgroundColor: C.bg,
     paddingTop: 8,
     paddingBottom: 4,
