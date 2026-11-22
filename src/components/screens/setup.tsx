@@ -135,7 +135,7 @@ export function Setup({
 
       <Card style={{ alignItems: 'center' }}>
         <Text style={s.fieldLabel}>YOUR DAILY TARGET</Text>
-        <Headline size={48}>{goals ? `${goals.calories.toLocaleString()} kcal` : '—'}</Headline>
+        <Headline size={48}>{goals ? `${goals.calories.toLocaleString()} cal` : '—'}</Headline>
         <Text style={[s.muted, { textAlign: 'center' }]}>
           {goals
             ? `Protein ${goals.protein} g · Carbs ${goals.carbs} g · Fat ${goals.fat} g`

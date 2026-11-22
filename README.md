@@ -13,7 +13,7 @@
 It gets its own icon and opens full screen like a normal app. You can log food by hand as a guest. Photo estimates need a free account and an invite code (they're paid for per photo, so they're invite-only for now).
 
 <p>
-  <img src="docs/screenshots/today.jpg" width="200" alt="Today screen: calorie ring with 880 kcal left, macro bars and today's meals" />
+  <img src="docs/screenshots/today.jpg" width="200" alt="Today screen: calorie ring with 880 cal left, macro bars and today's meals" />
   <img src="docs/screenshots/review.jpg" width="200" alt="Review screen: editable food name, calories, protein, carbs, fat and servings" />
   <img src="docs/screenshots/history.jpg" width="200" alt="History calendar: days on target in aqua, days over in orange" />
   <img src="docs/screenshots/progress.jpg" width="200" alt="Progress screen: weight trend line and last 7 days of calories" />
@@ -25,7 +25,7 @@ It gets its own icon and opens full screen like a normal app. You can log food b
 - **Barcode lookup.** Snap the barcode on a packaged food and Forkcast reads it and pulls the exact label nutrition from [Open Food Facts](https://world.openfoodfacts.org), a free public food database. No barcode match? You get the AI estimate instead.
 - **Animated launch.** The logo's ring fills up around the fork every time the app opens.
 - **A daily target made for you.** A quick setup asks your age, sex, height, weight, activity and goal, then works out your calories with the Mifflin-St Jeor equation and splits them into protein, carbs and fat.
-- **Today at a glance.** A calorie ring that fills as you eat (and turns orange if you go over), macro bars, and a nudge like *"You have 880 kcal left today."*
+- **Today at a glance.** A calorie ring that fills as you eat (and turns orange if you go over), macro bars, and a nudge like *"You have 880 cal left today."*
 - **Add without a photo.** Type it in, or tap one of your recent foods to fill everything in at once.
 - **History calendar.** Every day is colored: aqua for on target, orange for over. Tap a day to see what you ate.
 - **Progress.** Log your weight and see your trend line, plus a 7-day calorie chart against your goal.
@@ -43,7 +43,7 @@ I planned the app with a 5-step framework before building it:
 | **Core loop** (action → reward in under 30 seconds) | Snap → AI estimate → tweak → Add → the ring fills up |
 | **Accessory features** (only what supports the loop) | Goal setup, manual add, recent foods, history calendar, weight log and charts |
 | **Surface area** (5–7 screens max) | 5 core screens: Setup, Today, Snap & Review, History, Progress (plus sign-in and privacy) |
-| **Retention hook** | Logging streak and the "kcal left today" nudge |
+| **Retention hook** | Logging streak and the "cal left today" nudge |
 
 ## How the AI part works (and stays safe)
 

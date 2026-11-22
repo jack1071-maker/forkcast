@@ -66,8 +66,8 @@ export function History({ state }: { state: AppState }) {
           ))}
           {cells.map((c, i) => {
             if (!c) return <View key={i} style={st.cell} />;
-            const kcal = perDay.get(c);
-            const bg = kcal == null ? 'transparent' : kcal > goal * 1.05 ? C.over : C.good;
+            const cal = perDay.get(c);
+            const bg = cal == null ? 'transparent' : cal > goal * 1.05 ? C.over : C.good;
             const future = c > today;
             const isSel = c === selected;
             return (
@@ -83,10 +83,10 @@ export function History({ state }: { state: AppState }) {
                   style={[
                     st.dot,
                     { backgroundColor: bg },
-                    c === today && kcal == null && { borderColor: C.text, borderWidth: 1.5 },
+                    c === today && cal == null && { borderColor: C.text, borderWidth: 1.5 },
                     isSel && { borderColor: C.text, borderWidth: 2 },
                   ]}>
-                  <Text style={[st.dayNum, kcal != null && { color: C.onAccent }, future && { opacity: 0.3 }]}>
+                  <Text style={[st.dayNum, cal != null && { color: C.onAccent }, future && { opacity: 0.3 }]}>
                     {parseDay(c).getDate()}
                   </Text>
                 </View>
@@ -109,7 +109,7 @@ export function History({ state }: { state: AppState }) {
       ) : (
         <>
           <Text style={s.body}>
-            {t.calories.toLocaleString()} / {goal.toLocaleString()} kcal · P {t.protein} · C {t.carbs} · F {t.fat}
+            {t.calories.toLocaleString()} / {goal.toLocaleString()} cal · P {t.protein} · C {t.carbs} · F {t.fat}
           </Text>
           {list.map((e) => (
             <FoodRow key={e.id} entry={e} />

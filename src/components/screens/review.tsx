@@ -245,7 +245,7 @@ export function Review({
               <View style={st.nameIcon}><ForkIcon size={20} color={C.text} /></View>
               <Field label="What is it?" value={name} onChange={setName} text placeholder="e.g. Turkey sandwich" style={{ flex: 1 }} />
             </View>
-            <Field label="Calories (one serving)" value={cal} onChange={setCal} suffix="kcal" />
+            <Field label="Calories (one serving)" value={cal} onChange={setCal} suffix="cal" />
             <View style={st.row}>
               <Field label="Protein" value={protein} onChange={setProtein} suffix="g" style={{ flex: 1 }} />
               <Field label="Carbs" value={carbs} onChange={setCarbs} suffix="g" style={{ flex: 1 }} />
@@ -262,7 +262,7 @@ export function Review({
           </Card>
 
           <Card style={{ alignItems: 'center', gap: 4 }}>
-            <Headline size={40}>{food.calories.toLocaleString()} kcal</Headline>
+            <Headline size={40}>{food.calories.toLocaleString()} cal</Headline>
             <Text style={s.muted}>
               P {food.protein} g · C {food.carbs} g · F {food.fat} g
             </Text>

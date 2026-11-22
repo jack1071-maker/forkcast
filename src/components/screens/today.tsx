@@ -46,7 +46,7 @@ export function Today({
         <Text style={st.label}>Calories</Text>
         <Ring progress={t.calories / goals.calories} color={over ? C.over : C.good} size={220} stroke={14}>
           <Text style={st.big}>{Math.abs(left).toLocaleString()}</Text>
-          <Text style={st.bigUnit}>{over ? 'KCAL OVER' : 'KCAL LEFT'}</Text>
+          <Text style={st.bigUnit}>{over ? 'CAL OVER' : 'CAL LEFT'}</Text>
         </Ring>
         <View style={st.statsRow}>
           <Stat value={t.calories.toLocaleString()} label="Eaten" />
@@ -92,9 +92,9 @@ function Stat({ value, label, color = C.text }: { value: string; label: string; 
 
 function nudge(count: number, left: number) {
   if (count === 0) return 'Log your first meal to keep your streak going.';
-  if (left < 0) return `You're ${Math.abs(left)} kcal over today. Tomorrow's a fresh start.`;
+  if (left < 0) return `You're ${Math.abs(left)} cal over today. Tomorrow's a fresh start.`;
   if (left < 150) return 'Right on target. Nicely done.';
-  return `You have ${left.toLocaleString()} kcal left today.`;
+  return `You have ${left.toLocaleString()} cal left today.`;
 }
 
 function confirmDelete(e: Entry, onDelete: (id: string) => void) {
@@ -138,7 +138,7 @@ export function FoodRow({ entry, onDelete }: { entry: Entry; onDelete?: () => vo
       </View>
       <View style={{ alignItems: 'flex-end' }}>
         <Text style={st.rowKcal}>{entry.calories}</Text>
-        <Text style={st.rowUnit}>KCAL</Text>
+        <Text style={st.rowUnit}>CAL</Text>
       </View>
       {onDelete ? (
         <Pressable onPress={onDelete} hitSlop={10} accessibilityLabel={`Remove ${entry.name}`} style={{ paddingLeft: 2 }}>

@@ -143,7 +143,7 @@ export function Progress({
         <Text style={s.fieldLabel}>LAST 7 DAYS</Text>
         <WeekBars week={week} goal={goal} width={width} />
         <Text style={s.muted}>
-          {logged.length ? `Average ${avg.toLocaleString()} kcal on days you logged (goal ${goal.toLocaleString()}).` : 'No food logged this week yet.'}
+          {logged.length ? `Average ${avg.toLocaleString()} cal on days you logged (goal ${goal.toLocaleString()}).` : 'No food logged this week yet.'}
         </Text>
       </Card>
 
@@ -151,7 +151,7 @@ export function Progress({
         <Text style={s.fieldLabel}>DAILY TARGET</Text>
         <Text style={s.body}>
           {state.goals
-            ? `${state.goals.calories.toLocaleString()} kcal · P ${state.goals.protein} g · C ${state.goals.carbs} g · F ${state.goals.fat} g`
+            ? `${state.goals.calories.toLocaleString()} cal · P ${state.goals.protein} g · C ${state.goals.carbs} g · F ${state.goals.fat} g`
             : '—'}
         </Text>
         <Button title="Edit goals" kind="secondary" onPress={onEditGoals} />
