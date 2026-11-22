@@ -2,7 +2,9 @@
 
 **Snap your food, see the calories, hit your goal.** Take a photo of a meal and Forkcast's AI estimates the calories, protein, carbs and fat in a few seconds. Tweak anything that looks off, tap **Add to today**, and watch your daily ring fill up.
 
-**[▶ Try the live app](https://jack1071-forkcast.expo.app)** (works best at phone size)
+**[▶ Try the live app](https://jack1071-forkcast.expo.app)** (works best at phone size), or scan this with your phone's camera:
+
+<img src="docs/web-qr.png" width="160" alt="QR code that opens jack1071-forkcast.expo.app" />
 
 **📱 Put it on your phone:** open the link on your phone, then:
 - **iPhone (Safari):** tap **Share → Add to Home Screen**
