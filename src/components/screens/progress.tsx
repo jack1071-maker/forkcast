@@ -1,22 +1,52 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { LayoutChangeEvent, Platform, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
 
 import { Button, Card, Field, Headline, num, s } from '@/components/bits';
 import { AppState, addDays, dayKey, entriesOn, kgToLb, lbToKg, parseDay, showWeight, totals } from '@/lib/food';
 import { C } from '@/lib/ui';
 
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
+
+export type AccountInfo = {
+  /** False when the app was built without Supabase (accounts hidden). */
+  enabled: boolean;
+  email: string | null;
+  sync: SyncStatus;
+  onSignUp: () => void;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  /** Returns an error message, or null when the account was deleted. */
+  onDelete: () => Promise<string | null>;
+};
+
+/** Yes/no question that works on phones and on the web. */
+function ask(title: string, msg: string, okLabel: string, onOk: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(msg)) onOk();
+    return;
+  }
+  Alert.alert(title, msg, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: okLabel, style: 'destructive', onPress: onOk },
+  ]);
+}
+
 export function Progress({
   state,
+  account,
   onWeigh,
   onEditGoals,
   onReset,
 }: {
   state: AppState;
+  account: AccountInfo;
   onWeigh: (kg: number) => void;
   onEditGoals: () => void;
   onReset: () => void;
 }) {
+  const [accountError, setAccountError] = useState<string | null>(null);
   const units = state.profile?.units ?? 'imperial';
   const [w, setW] = useState('');
   const [width, setWidth] = useState(300);
@@ -43,17 +73,32 @@ export function Progress({
     setW('');
   };
 
-  const confirmReset = () => {
-    const msg = 'This deletes all your food, weights and goals on this device. It cannot be undone.';
-    if (Platform.OS === 'web') {
-      if (window.confirm(msg)) onReset();
-      return;
-    }
-    Alert.alert('Start over?', msg, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete everything', style: 'destructive', onPress: onReset },
-    ]);
-  };
+  const confirmReset = () =>
+    ask(
+      'Start over?',
+      account.email
+        ? 'This deletes all your food, weights and goals, on this device and in your account. It cannot be undone.'
+        : 'This deletes all your food, weights and goals on this device. It cannot be undone.',
+      'Delete everything',
+      onReset,
+    );
+
+  const confirmDeleteAccount = () =>
+    ask(
+      'Delete account?',
+      'This permanently deletes your Forkcast account and everything saved in it. It cannot be undone.',
+      'Delete account',
+      async () => {
+        setAccountError(await account.onDelete());
+      },
+    );
+
+  const syncText =
+    account.sync === 'syncing'
+      ? 'Backing up…'
+      : account.sync === 'error'
+        ? 'Couldn’t back up right now. It’s saved on this device and will retry.'
+        : 'Backed up ✓';
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
@@ -112,7 +157,34 @@ export function Progress({
         <Button title="Edit goals" kind="secondary" onPress={onEditGoals} />
       </Card>
 
+      {account.enabled ? (
+        <Card>
+          <Text style={s.fieldLabel}>ACCOUNT</Text>
+          {account.email ? (
+            <>
+              <Text style={s.body}>Signed in as {account.email}</Text>
+              <Text style={s.muted}>{syncText}</Text>
+              <Button title="Sign out" kind="secondary" onPress={account.onSignOut} />
+              <Button title="Delete my account" kind="danger" onPress={confirmDeleteAccount} />
+              {accountError ? <Text style={st.error}>{accountError}</Text> : null}
+            </>
+          ) : (
+            <>
+              <Text style={s.muted}>
+                You&apos;re using Forkcast as a guest. Your log is only on this device. A free account unlocks photo
+                estimates and backs everything up.
+              </Text>
+              <Button title="Create a free account" onPress={account.onSignUp} />
+              <Button title="Sign in" kind="secondary" onPress={account.onSignIn} />
+            </>
+          )}
+        </Card>
+      ) : null}
+
       <Button title="Start over (delete all data)" kind="danger" onPress={confirmReset} />
+      <Pressable onPress={() => router.push('/privacy')} accessibilityRole="link">
+        <Text style={st.link}>Privacy policy</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -186,5 +258,7 @@ const st = StyleSheet.create({
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   stats: { flexDirection: 'row', gap: 10 },
   stat: { color: C.text, fontSize: 18, fontWeight: '800', marginTop: 2 },
+  error: { color: C.danger, fontSize: 14, textAlign: 'center' },
+  link: { color: C.accent, fontSize: 14, textAlign: 'center', paddingVertical: 6 },
   barLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
 });

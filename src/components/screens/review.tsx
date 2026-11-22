@@ -10,7 +10,7 @@ import { C, R, tapBuzz } from '@/lib/ui';
 
 export type NewFood = Macros & { name: string; emoji: string; source: Entry['source'] };
 
-type Step = 'pick' | 'analyzing' | 'edit';
+type Step = 'account' | 'pick' | 'analyzing' | 'invite' | 'edit';
 
 /**
  * The core loop: photo → estimate → tweak → add.
@@ -19,15 +19,21 @@ type Step = 'pick' | 'analyzing' | 'edit';
 export function Review({
   mode,
   recent,
+  needsAccount,
+  onAccount,
   onAdd,
   onClose,
 }: {
   mode: 'photo' | 'manual';
   recent: Entry[];
+  /** Guests can't use the photo AI; show the "create a free account" step instead. */
+  needsAccount: boolean;
+  onAccount: () => void;
   onAdd: (food: NewFood) => void;
   onClose: () => void;
 }) {
-  const [step, setStep] = useState<Step>(mode === 'photo' ? 'pick' : 'edit');
+  const [step, setStep] = useState<Step>(mode === 'photo' ? (needsAccount ? 'account' : 'pick') : 'edit');
+  const [invite, setInvite] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [demo, setDemo] = useState(false);
   const [lowConfidence, setLowConfidence] = useState(false);
@@ -74,16 +80,32 @@ export function Review({
     }
 
     setPhoto(uri);
+    await analyze(uri);
+  };
+
+  /** Send the photo to the AI. Also used again after typing the invite code. */
+  const analyze = async (uri: string, inviteCode?: string) => {
+    setError(null);
     setStep('analyzing');
     try {
-      const guess = await analyzePhoto(uri);
+      const guess = await analyzePhoto(uri, inviteCode);
       fill(guess);
       setDemo(guess.demo);
       setLowConfidence(guess.confidence === 'low');
       setStep('edit');
     } catch (e) {
+      const err = e instanceof AnalyzeError ? e : null;
+      if (err?.code === 'invite_needed' || err?.code === 'invite_wrong') {
+        setError(err.code === 'invite_wrong' ? err.message : null);
+        setStep('invite');
+        return;
+      }
+      if (err?.code === 'auth') {
+        setStep('account');
+        return;
+      }
       setPhoto(null);
-      setError(e instanceof AnalyzeError ? e.message : 'Something went wrong. Please try again.');
+      setError(err?.message ?? 'Something went wrong. Please try again.');
       setStep('pick');
     }
   };
@@ -110,6 +132,35 @@ export function Review({
       </View>
 
       {photo ? <Image source={{ uri: photo }} style={st.photo} contentFit="cover" /> : null}
+
+      {step === 'account' ? (
+        <>
+          <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
+            <Text style={{ fontSize: 56 }}>🔐</Text>
+            <Text style={[s.body, { textAlign: 'center', fontWeight: '700' }]}>Photo estimates need a free account</Text>
+            <Text style={[s.muted, { textAlign: 'center' }]}>
+              Sign up or sign in to use the AI. Your food log is backed up too, so you never lose it.
+            </Text>
+          </Card>
+          <Button title="Create account or sign in" onPress={onAccount} />
+          <Button title="Enter it by hand" kind="secondary" onPress={() => setStep('edit')} />
+        </>
+      ) : null}
+
+      {step === 'invite' ? (
+        <>
+          <Card>
+            <Text style={[s.body, { fontWeight: '700' }]}>🎟️ Enter your invite code</Text>
+            <Text style={s.muted}>
+              Forkcast&apos;s photo AI is invite-only for now. You only need to enter the code once.
+            </Text>
+            <Field label="Invite code" value={invite} onChange={setInvite} text placeholder="e.g. forkcast-1234" />
+            {error ? <Text style={st.error}>{error}</Text> : null}
+          </Card>
+          <Button title="Unlock and analyze" disabled={!invite.trim() || !photo} onPress={() => photo && analyze(photo, invite)} />
+          <Button title="Enter it by hand" kind="ghost" onPress={() => setStep('edit')} />
+        </>
+      ) : null}
 
       {step === 'pick' ? (
         <>

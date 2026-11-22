@@ -2,7 +2,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
 import { Macros } from './food';
-import { cloudEnabled, ensureSignedIn, supabase } from './supabase';
+import { cloudEnabled, supabase } from './supabase';
 
 export type FoodGuess = Macros & {
   name: string;
@@ -12,15 +12,22 @@ export type FoodGuess = Macros & {
   confidence?: 'low' | 'medium' | 'high';
 };
 
-/** A problem we can show to the person as-is. */
-export class AnalyzeError extends Error {}
+/** A problem we can show to the person as-is. `code` says what to offer next (e.g. the invite box). */
+export type AnalyzeErrorCode = 'invite_needed' | 'invite_wrong' | 'auth' | 'other';
+export class AnalyzeError extends Error {
+  code: AnalyzeErrorCode;
+  constructor(message: string, code: AnalyzeErrorCode = 'other') {
+    super(message);
+    this.code = code;
+  }
+}
 
 /**
  * Turns a food photo into a calorie/macro estimate.
  * The photo is shrunk, then sent to our Supabase Edge Function ("analyze-food"),
  * which checks the daily limits and asks Claude. The Claude API key never lives in the app.
  */
-export async function analyzePhoto(uri: string): Promise<FoodGuess> {
+export async function analyzePhoto(uri: string, inviteCode?: string): Promise<FoodGuess> {
   if (!cloudEnabled || !supabase) return sampleMeal();
 
   // Smaller photo = faster upload and a cheaper AI call. 1024 px wide is plenty to see food.
@@ -37,21 +44,16 @@ export async function analyzePhoto(uri: string): Promise<FoodGuess> {
   }
   if (!image) throw new AnalyzeError("Couldn't read that photo. Try another one.");
 
-  try {
-    await ensureSignedIn();
-  } catch {
-    throw new AnalyzeError("Can't reach Forkcast's server. Check your internet, or add the food by hand.");
-  }
-
   const { data, error } = await supabase.functions.invoke('analyze-food', {
-    body: { image, mediaType: 'image/jpeg' },
+    body: { image, mediaType: 'image/jpeg', inviteCode: inviteCode?.trim() || undefined },
   });
 
   if (error) {
     // The server sends a friendly "message" with every error (daily limit reached, etc.).
     if (error instanceof FunctionsHttpError) {
       const body = await error.context.json().catch(() => null);
-      throw new AnalyzeError(body?.message ?? 'Something went wrong. Please try again.');
+      const code = ['invite_needed', 'invite_wrong', 'auth'].includes(body?.error) ? body.error : 'other';
+      throw new AnalyzeError(body?.message ?? 'Something went wrong. Please try again.', code);
     }
     throw new AnalyzeError("Can't reach Forkcast's server. Check your internet, or add the food by hand.");
   }

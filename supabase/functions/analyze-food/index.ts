@@ -11,6 +11,8 @@ const USER_DAILY_LIMIT = 10;
 const TOTAL_DAILY_LIMIT = 50;
 /** About 5 MB of photo once decoded. The app shrinks photos well below this. */
 const MAX_BASE64_LENGTH = 7_000_000;
+/** Shared code you give to friends; set with `supabase secrets set FORKCAST_INVITE_CODE=...`. */
+const INVITE_CODE = (Deno.env.get('FORKCAST_INVITE_CODE') ?? '').trim().toLowerCase();
 const MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 type MediaType = (typeof MEDIA_TYPES)[number];
 
@@ -57,14 +59,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method', message: 'Use POST.' });
 
-  // 1. Who is asking? Must be a signed-in Forkcast user (anonymous sign-in counts).
+  // 1. Who is asking? Must be signed in with a real (email) Forkcast account.
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   const { data: auth, error: authError } = token ? await admin.auth.getUser(token) : { data: null, error: true };
   const user = auth?.user;
-  if (authError || !user) return reply(401, { error: 'auth', message: 'Please reopen the app and try again.' });
+  if (authError || !user || user.is_anonymous) {
+    return reply(401, { error: 'auth', message: 'Sign in to your Forkcast account to use photo estimates.' });
+  }
 
   // 2. Is the photo sensible?
-  let body: { image?: unknown; mediaType?: unknown };
+  let body: { image?: unknown; mediaType?: unknown; inviteCode?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -77,7 +81,20 @@ Deno.serve(async (req) => {
   if (!image || !mediaType) return reply(400, { error: 'bad_request', message: 'No photo was sent.' });
   if (image.length > MAX_BASE64_LENGTH) return reply(413, { error: 'too_big', message: 'That photo is too large.' });
 
-  // 3. Under today's limits? (Counts this analysis if so.)
+  // 3. Has this account unlocked the photo AI with the invite code?
+  const { data: access } = await admin.from('ai_access').select('user_id').eq('user_id', user.id).maybeSingle();
+  if (!access) {
+    const tried = typeof body.inviteCode === 'string' ? body.inviteCode.trim().toLowerCase() : '';
+    if (!tried) {
+      return reply(403, { error: 'invite_needed', message: 'Enter your invite code to unlock photo estimates.' });
+    }
+    if (!INVITE_CODE || tried !== INVITE_CODE) {
+      return reply(403, { error: 'invite_wrong', message: "That invite code isn't right. Check it and try again." });
+    }
+    await admin.from('ai_access').upsert({ user_id: user.id });
+  }
+
+  // 4. Under today's limits? (Counts this analysis if so.)
   const { data: claim, error: claimError } = await admin.rpc('claim_ai_analysis', {
     p_user: user.id,
     p_user_limit: USER_DAILY_LIMIT,
@@ -100,7 +117,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 4. Ask Claude.
+  // 5. Ask Claude.
   try {
     const response = await anthropic.beta.messages.create({
       model: 'claude-opus-5-5',

@@ -19,10 +19,13 @@ export function Setup({
   initial,
   onSave,
   onCancel,
+  onSignIn,
 }: {
   initial: Profile | null;
   onSave: (p: Profile) => void;
   onCancel?: () => void;
+  /** Shown on first run: lets people with an account get their data back instead. */
+  onSignIn?: () => void;
 }) {
   const [units, setUnits] = useState<Units>(initial?.units ?? 'imperial');
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'male');
@@ -142,6 +145,7 @@ export function Setup({
 
       <Button title={initial ? 'Save goals' : "Let's go"} disabled={!valid} onPress={() => onSave(profile)} />
       {onCancel ? <Button title="Cancel" kind="ghost" onPress={onCancel} /> : null}
+      {onSignIn ? <Button title="I already have an account" kind="ghost" onPress={onSignIn} /> : null}
       <Text style={[s.muted, { fontSize: 12, textAlign: 'center' }]}>
         Estimates only, not medical advice. Uses the Mifflin-St Jeor equation.
       </Text>

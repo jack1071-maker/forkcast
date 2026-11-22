@@ -9,8 +9,11 @@ import { AppState as RNAppState, Platform } from 'react-native';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-/** False if the app was built without Supabase keys. Photo analysis then uses sample meals. */
+/** False if the app was built without Supabase keys. Accounts are then hidden and photo analysis uses sample meals. */
 export const cloudEnabled = Boolean(url && key);
+
+/** The live web app. Password-reset emails link here (it's also the Supabase "Site URL"). */
+export const APP_URL = 'https://jack1071-forkcast.expo.app';
 
 // While the web version is pre-rendered on the build machine there is no browser storage,
 // so only use AsyncStorage when the app is actually running.
@@ -22,7 +25,8 @@ export const supabase: SupabaseClient | null = cloudEnabled
         storage: isServer ? undefined : AsyncStorage,
         autoRefreshToken: true,
         persistSession: !isServer,
-        detectSessionInUrl: false,
+        // On the web, read the sign-in token from a password-reset link when the page opens.
+        detectSessionInUrl: Platform.OS === 'web' && !isServer,
       },
     })
   : null;
@@ -33,18 +37,4 @@ if (supabase && Platform.OS !== 'web') {
     if (s === 'active') supabase.auth.startAutoRefresh();
     else supabase.auth.stopAutoRefresh();
   });
-}
-
-/**
- * Makes sure this device has a (silent, anonymous) Forkcast sign-in.
- * No email or password: Supabase gives the device a private user ID,
- * which the server uses for the daily photo limit.
- */
-export async function ensureSignedIn() {
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session;
-  const { data: signedIn, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-  return signedIn.session;
 }
