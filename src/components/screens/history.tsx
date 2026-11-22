@@ -3,20 +3,32 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card, Headline, MacroBar, s } from '@/components/bits';
 import { MealList } from '@/components/meals';
-import { AppState, DayResult, GoalType, Macros, dayKey, dayResult, entriesOn, parseDay, totals } from '@/lib/food';
+import { AppState, DayResult, Entry, GoalType, Macros, dayKey, dayResult, entriesOn, parseDay, totals } from '@/lib/food';
 import { ChevronIcon } from '@/components/icons';
 import { C, F, resultColor, tapBuzz } from '@/lib/ui';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /** Month calendar: aqua = on target, orange = over, empty = nothing logged. Tap a day to see it. */
-export function History({ state }: { state: AppState }) {
+export function History({
+  state,
+  initialDay,
+  onEdit,
+  onCopy,
+}: {
+  state: AppState;
+  /** Open on this day instead of today. */
+  initialDay?: string | null;
+  onEdit: (entry: Entry) => void;
+  /** Copy a meal from a past day into today. */
+  onCopy: (items: Entry[]) => void;
+}) {
   const today = dayKey();
   const [month, setMonth] = useState(() => {
-    const d = new Date();
+    const d = initialDay ? parseDay(initialDay) : new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [selected, setSelected] = useState(today);
+  const [selected, setSelected] = useState(initialDay ?? today);
   const goal = state.goals?.calories ?? 2000;
   const goalType = state.profile?.goal ?? 'lose';
 
@@ -119,7 +131,7 @@ export function History({ state }: { state: AppState }) {
             goalType={goalType}
             items={list.length}
           />
-          <MealList entries={list} />
+          <MealList entries={list} onEdit={onEdit} onCopy={selected === today ? undefined : onCopy} />
         </>
       )}
     </ScrollView>

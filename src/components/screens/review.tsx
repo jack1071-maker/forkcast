@@ -3,36 +3,62 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Field, Headline, num, s } from '@/components/bits';
+import { Button, Card, Choice, Field, Headline, num, s } from '@/components/bits';
 import { AnalyzeError, analyzePhoto } from '@/lib/analyze';
-import { Entry, Macros } from '@/lib/food';
-import { BarcodeIcon, CameraIcon, CloseIcon, ForkIcon, KeyIcon, LockIcon, MinusIcon, PlusIcon } from '@/components/icons';
+import { Entry, Macros, SavedFood } from '@/lib/food';
+import {
+  BarcodeIcon,
+  CameraIcon,
+  CloseIcon,
+  ForkIcon,
+  KeyIcon,
+  LockIcon,
+  MEALS,
+  MealName,
+  MinusIcon,
+  PlusIcon,
+  StarIcon,
+  mealFor,
+} from '@/components/icons';
 import { C, F, R, tapBuzz } from '@/lib/ui';
 
 export type NewFood = Macros & { name: string; emoji: string; source: Entry['source'] };
+
+/** What the screen hands back: the food, whether it's starred, and (when editing) which meal it belongs to. */
+export type ReviewResult = { food: NewFood; star: boolean; meal?: MealName };
 
 type Step = 'account' | 'pick' | 'analyzing' | 'invite' | 'edit';
 
 /**
  * The core loop: photo → estimate → tweak → add.
- * mode "photo" starts at the camera/library choice; "manual" goes straight to the form.
+ * mode "photo" starts at the camera/library choice; "manual" goes straight to the form;
+ * "edit" changes a food that's already logged (`initial`).
  */
 export function Review({
   mode,
+  initial,
   recent,
+  favorites,
+  isFavorite,
   needsAccount,
   onAccount,
   onAdd,
+  onDelete,
   onClose,
 }: {
-  mode: 'photo' | 'manual';
+  mode: 'photo' | 'manual' | 'edit';
+  initial?: Entry;
   recent: Entry[];
+  favorites: SavedFood[];
+  isFavorite: (name: string) => boolean;
   /** Guests can't use the photo AI; show the "create a free account" step instead. */
   needsAccount: boolean;
   onAccount: () => void;
-  onAdd: (food: NewFood) => void;
+  onAdd: (result: ReviewResult) => void;
+  onDelete?: () => void;
   onClose: () => void;
 }) {
+  const editing = mode === 'edit' && !!initial;
   const [step, setStep] = useState<Step>(mode === 'photo' ? (needsAccount ? 'account' : 'pick') : 'edit');
   const [invite, setInvite] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -49,8 +75,17 @@ export function Review({
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [servings, setServings] = useState(1);
+  const [star, setStar] = useState(false);
+  const [meal, setMeal] = useState<MealName>(() => mealFor(initial ? new Date(initial.time) : new Date()).label);
+
+  // Editing: start from the logged food's numbers.
+  useEffect(() => {
+    if (editing && initial) fill(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fill = (f: Macros & { name: string; emoji: string }) => {
+    setStar(isFavorite(f.name));
     setName(f.name);
     setEmoji(f.emoji);
     setCal(String(f.calories));
@@ -97,6 +132,7 @@ export function Review({
       setLowConfidence(guess.confidence === 'low' && guess.from !== 'database');
       setMatch(guess.from === 'database' && guess.barcode ? { barcode: guess.barcode, serving: guess.serving ?? '1 serving' } : null);
       setStep('edit');
+      setStar(isFavorite(guess.name));
     } catch (e) {
       const err = e instanceof AnalyzeError ? e : null;
       if (err?.code === 'invite_needed' || err?.code === 'invite_wrong') {
@@ -122,14 +158,14 @@ export function Review({
     protein: Math.round(num(protein) * k),
     carbs: Math.round(num(carbs) * k),
     fat: Math.round(num(fat) * k),
-    source: photo ? 'photo' : 'manual',
+    source: editing && initial ? initial.source : photo ? 'photo' : 'manual',
   };
   const canAdd = food.calories > 0;
 
   return (
     <ScrollView contentContainerStyle={st.wrap} keyboardShouldPersistTaps="handled">
       <View style={st.top}>
-        <Headline size={30}>{mode === 'photo' ? 'SNAP YOUR FOOD' : 'ADD FOOD'}</Headline>
+        <Headline size={30}>{editing ? 'EDIT FOOD' : mode === 'photo' ? 'SNAP YOUR FOOD' : 'ADD FOOD'}</Headline>
         <Pressable onPress={onClose} hitSlop={16} accessibilityLabel="Close" style={st.closeBtn}>
           <CloseIcon size={22} color={C.muted} />
         </Pressable>
@@ -219,32 +255,31 @@ export function Review({
             </View>
           ) : null}
 
+          {mode === 'manual' && favorites.length > 0 ? (
+            <ChipRow label="FAVORITES (tap to fill in)" items={favorites} starred onPick={fill} />
+          ) : null}
           {mode === 'manual' && recent.length > 0 ? (
-            <View style={{ gap: 8 }}>
-              <Text style={s.fieldLabel}>RECENT (tap to fill in)</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {recent.map((r) => (
-                  <Pressable
-                    key={r.id}
-                    onPress={() => {
-                      tapBuzz();
-                      fill(r);
-                    }}
-                    style={st.chip}>
-                    <Text style={st.chipText}>
-                      {r.name} · {r.calories}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
+            <ChipRow label="RECENT (tap to fill in)" items={recent} onPick={fill} />
           ) : null}
 
           <Card>
             <View style={st.row}>
               <View style={st.nameIcon}><ForkIcon size={20} color={C.text} /></View>
               <Field label="What is it?" value={name} onChange={setName} text placeholder="e.g. Turkey sandwich" style={{ flex: 1 }} />
+              <Pressable
+                onPress={() => {
+                  tapBuzz();
+                  setStar((v) => !v);
+                }}
+                hitSlop={8}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: star }}
+                accessibilityLabel="Save as a favorite"
+                style={[st.nameIcon, star && { backgroundColor: C.carbs + '55' }]}>
+                <StarIcon size={20} color={star ? C.star : C.muted} filled={star} />
+              </Pressable>
             </View>
+            {star ? <Text style={st.starNote}>Starred: it shows up under Quick add on Today.</Text> : null}
             <Field label="Calories (one serving)" value={cal} onChange={setCal} suffix="cal" />
             <View style={st.row}>
               <Field label="Protein" value={protein} onChange={setProtein} suffix="g" style={{ flex: 1 }} />
@@ -259,6 +294,12 @@ export function Review({
                 <Stepper label="+" onPress={() => setServings((v) => Math.min(10, v + 0.5))} />
               </View>
             </View>
+            {editing ? (
+              <View style={{ gap: 8 }}>
+                <Text style={s.fieldLabel}>Meal</Text>
+                <Choice options={MEALS.map((m) => ({ value: m, label: m }))} value={meal} onChange={setMeal} />
+              </View>
+            ) : null}
           </Card>
 
           <Card style={{ alignItems: 'center', gap: 4 }}>
@@ -269,13 +310,14 @@ export function Review({
           </Card>
 
           <Button
-            title="Add to today"
+            title={editing ? 'Save changes' : 'Add to today'}
             disabled={!canAdd}
             onPress={() => {
               if (!canAdd) return;
-              onAdd(food);
+              onAdd({ food, star, meal: editing ? meal : undefined });
             }}
           />
+          {editing && onDelete ? <Button title="Remove this food" kind="danger" onPress={onDelete} /> : null}
           {mode === 'photo' && photo ? (
             <Button
               title="Retake photo"
@@ -289,6 +331,41 @@ export function Review({
         </>
       ) : null}
     </ScrollView>
+  );
+}
+
+/** A sideways-scrolling row of food chips; tapping one fills in the form. */
+function ChipRow({
+  label,
+  items,
+  starred,
+  onPick,
+}: {
+  label: string;
+  items: (Macros & { name: string; emoji: string })[];
+  starred?: boolean;
+  onPick: (f: Macros & { name: string; emoji: string }) => void;
+}) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {items.map((r) => (
+          <Pressable
+            key={r.name}
+            onPress={() => {
+              tapBuzz();
+              onPick(r);
+            }}
+            style={[st.chip, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            {starred ? <StarIcon size={14} color={C.star} filled /> : null}
+            <Text style={st.chipText}>
+              {r.name} · {r.calories}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -320,6 +397,7 @@ const st = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   chip: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: C.line },
   chipText: { color: C.text, fontSize: 14, fontFamily: F.semi },
+  starNote: { color: C.muted, fontFamily: F.medium, fontSize: 12, marginTop: -4 },
   servings: { color: C.text, fontSize: 20, fontFamily: F.head, minWidth: 36, textAlign: 'center' },
   step: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
   stepText: { color: C.text, fontSize: 22, fontFamily: F.head },

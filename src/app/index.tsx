@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,31 +12,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CalendarIcon, CameraIcon, RingIcon, TrendIcon } from '@/components/icons';
+import { CalendarIcon, CameraIcon, MEAL_HOUR, RingIcon, TrendIcon, mealFor } from '@/components/icons';
 import { AuthScreen, NewPasswordScreen } from '@/components/screens/auth';
 import { History } from '@/components/screens/history';
 import { Progress, SyncStatus } from '@/components/screens/progress';
-import { NewFood, Review } from '@/components/screens/review';
+import { Review, ReviewResult } from '@/components/screens/review';
 import { Setup } from '@/components/screens/setup';
 import { Today } from '@/components/screens/today';
 import { fetchCloud, getSyncedAt, pushCloud, setSyncedAt } from '@/lib/cloud';
 import {
   AppState,
   EMPTY_STATE,
+  Entry,
   Profile,
+  SavedFood,
   computeGoals,
+  copyToDay,
   dayKey,
+  isFavorite,
   loadState,
   newId,
+  parseDay,
   recentFoods,
   saveState,
+  setFavorite,
 } from '@/lib/food';
 import { cloudEnabled, supabase } from '@/lib/supabase';
 import { C, F, doneBuzz, tapBuzz } from '@/lib/ui';
 import { useAccount } from '@/lib/use-account';
 
 type Tab = 'today' | 'history' | 'progress';
-type Overlay = null | 'photo' | 'manual' | 'goals' | 'signUp' | 'signIn';
+type Overlay = null | 'photo' | 'manual' | 'edit' | 'goals' | 'signUp' | 'signIn';
 
 /** How long to wait after the last change before uploading, so quick edits become one upload. */
 const PUSH_DELAY_MS = 1500;
@@ -48,6 +55,10 @@ export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [tab, setTab] = useState<Tab>('today');
   const [overlay, setOverlay] = useState<Overlay>(null);
+  /** The logged food being edited (overlay 'edit'). */
+  const [editing, setEditing] = useState<Entry | null>(null);
+  /** Which day History opens on (e.g. after tapping a day in Today's week strip). */
+  const [historyDay, setHistoryDay] = useState<string | null>(null);
   /** Where to go back to after signing in from the snap screen. */
   const [afterAuth, setAfterAuth] = useState<Overlay>(null);
   const { user, ready: authReady, recovering, doneRecovering } = useAccount();
@@ -180,16 +191,77 @@ export default function App() {
     setOverlay(null);
   };
 
-  const addFood = (f: NewFood) => {
+  /** Star or un-star a food, if that changed. */
+  const withStar = (s: AppState, food: SavedFood, star: boolean) =>
+    star || isFavorite(s, food.name) ? setFavorite(s, food, star) : s;
+
+  const addFood = ({ food, star }: ReviewResult) => {
     doneBuzz();
     setState((s) =>
-      s ? { ...s, entries: [...s.entries, { ...f, id: newId(), day: dayKey(), time: new Date().toISOString() }] } : s,
+      s
+        ? withStar(
+            { ...s, entries: [...s.entries, { ...food, id: newId(), day: dayKey(), time: new Date().toISOString() }] },
+            food,
+            star,
+          )
+        : s,
     );
     setOverlay(null);
     setTab('today');
   };
 
+  /** Save changes to a logged food. Moving it to another meal moves its time to that meal on the same day. */
+  const saveEdit = ({ food, star, meal }: ReviewResult) => {
+    const old = editing;
+    if (!old) return;
+    doneBuzz();
+    let time = old.time;
+    if (meal && meal !== mealFor(new Date(old.time)).label) {
+      const d = parseDay(old.day);
+      const [h, m] = MEAL_HOUR[meal];
+      time = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).toISOString();
+    }
+    setState((s) =>
+      s
+        ? withStar(
+            { ...s, entries: s.entries.map((e) => (e.id === old.id ? { ...e, ...food, source: old.source, time } : e)) },
+            food,
+            star,
+          )
+        : s,
+    );
+    setEditing(null);
+    setOverlay(null);
+  };
+
   const deleteFood = (id: string) => setState((s) => (s ? { ...s, entries: s.entries.filter((e) => e.id !== id) } : s));
+
+  /** One tap on a starred food logs it right now. */
+  const quickAdd = (f: SavedFood) => {
+    doneBuzz();
+    setState((s) =>
+      s
+        ? { ...s, entries: [...s.entries, { ...f, id: newId(), day: dayKey(), time: new Date().toISOString(), source: 'manual' }] }
+        : s,
+    );
+  };
+
+  /** Copy a past meal into today (same clock times, so it stays under the same meal). */
+  const copyMeal = (items: Entry[]) => {
+    doneBuzz();
+    setState((s) => (s ? { ...s, entries: [...s.entries, ...copyToDay(items, dayKey())] } : s));
+    setTab('today');
+  };
+
+  const setWater = (glasses: number) => {
+    const today = dayKey();
+    setState((s) => (s ? { ...s, water: { ...(s.water ?? {}), [today]: Math.max(0, glasses) } } : s));
+  };
+
+  const setTarget = (kg: number | null) => {
+    doneBuzz();
+    setState((s) => (s ? { ...s, targetKg: kg } : s));
+  };
 
   const weigh = (kg: number) => {
     doneBuzz();
@@ -290,20 +362,42 @@ export default function App() {
     );
   }
 
-  if (overlay === 'photo' || overlay === 'manual') {
+  if (overlay === 'photo' || overlay === 'manual' || (overlay === 'edit' && editing)) {
+    const close = () => {
+      setEditing(null);
+      setOverlay(null);
+    };
     return (
       <Screen>
         <Review
+          key={editing?.id ?? overlay}
           mode={overlay}
+          initial={editing ?? undefined}
           recent={recentFoods(state)}
+          favorites={state.favorites ?? []}
+          isFavorite={(name) => isFavorite(state, name)}
           needsAccount={cloudEnabled && !user}
           onAccount={() => openAuth('signUp', 'photo')}
-          onAdd={addFood}
-          onClose={() => setOverlay(null)}
+          onAdd={overlay === 'edit' ? saveEdit : addFood}
+          onDelete={
+            editing
+              ? () =>
+                  confirm(`Remove "${editing.name}"?`, () => {
+                    deleteFood(editing.id);
+                    close();
+                  })
+              : undefined
+          }
+          onClose={close}
         />
       </Screen>
     );
   }
+
+  const openEdit = (e: Entry) => {
+    setEditing(e);
+    setOverlay('edit');
+  };
 
   return (
     <Screen>
@@ -313,10 +407,19 @@ export default function App() {
             state={state}
             onSnap={() => setOverlay('photo')}
             onManual={() => setOverlay('manual')}
-            onDelete={deleteFood}
+            onEdit={openEdit}
+            onQuickAdd={quickAdd}
+            onCopyMeal={copyMeal}
+            onWater={setWater}
+            onOpenDay={(day) => {
+              setHistoryDay(day);
+              setTab('history');
+            }}
           />
         ) : null}
-        {tab === 'history' ? <History state={state} /> : null}
+        {tab === 'history' ? (
+          <History key={historyDay ?? 'today'} state={state} initialDay={historyDay} onEdit={openEdit} onCopy={copyMeal} />
+        ) : null}
         {tab === 'progress' ? (
           <Progress
             state={state}
@@ -330,6 +433,7 @@ export default function App() {
               onDelete: deleteAccount,
             }}
             onWeigh={weigh}
+            onSetTarget={setTarget}
             onEditGoals={() => setOverlay('goals')}
             onReset={() => {
               setState(EMPTY_STATE);
@@ -350,11 +454,31 @@ export default function App() {
           style={({ pressed }) => [st.snap, pressed && { transform: [{ scale: 0.94 }] }]}>
           <CameraIcon size={26} color={C.onAccent} strokeWidth={2} />
         </Pressable>
-        <TabButton Icon={CalendarIcon} label="History" on={tab === 'history'} onPress={() => setTab('history')} />
+        <TabButton
+          Icon={CalendarIcon}
+          label="History"
+          on={tab === 'history'}
+          onPress={() => {
+            setHistoryDay(null);
+            setTab('history');
+          }}
+        />
         <TabButton Icon={TrendIcon} label="Progress" on={tab === 'progress'} onPress={() => setTab('progress')} />
       </View>
     </Screen>
   );
+}
+
+/** Yes/no question that works on phones and on the web. */
+function confirm(msg: string, onYes: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(msg)) onYes();
+    return;
+  }
+  Alert.alert('Remove food', msg, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Remove', style: 'destructive', onPress: onYes },
+  ]);
 }
 
 /**

@@ -32,15 +32,42 @@ export type Entry = Macros & {
 
 export type WeighIn = { day: string; kg: number };
 
+/** A food saved with the star, for one-tap re-logging. */
+export type SavedFood = Macros & { name: string; emoji: string };
+
+/**
+ * Everything the app saves. Fields marked `?` were added later, so older saved data
+ * (on a phone or in someone's account) may not have them: always read them with a fallback.
+ */
 export type AppState = {
   version: 1;
   profile: Profile | null;
   goals: Macros | null;
   entries: Entry[];
   weights: WeighIn[];
+  /** Glasses of water per day, like { "2026-11-22": 5 }. */
+  water?: Record<string, number>;
+  /** Daily water goal in glasses (one glass = 250 ml / about 8 oz). */
+  waterGoal?: number;
+  /** Starred foods. */
+  favorites?: SavedFood[];
+  /** Goal weight in kg. */
+  targetKg?: number | null;
 };
 
-export const EMPTY_STATE: AppState = { version: 1, profile: null, goals: null, entries: [], weights: [] };
+export const EMPTY_STATE: AppState = {
+  version: 1,
+  profile: null,
+  goals: null,
+  entries: [],
+  weights: [],
+  water: {},
+  waterGoal: 8,
+  favorites: [],
+  targetKg: null,
+};
+
+export const ML_PER_GLASS = 250;
 
 export const ACTIVITY_LEVELS = [
   { value: 1.2, label: 'Mostly sitting', hint: 'Desk job, little exercise' },
@@ -128,6 +155,102 @@ export function recentFoods(state: AppState, limit = 8): Entry[] {
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/** Is this food one of the starred favorites? (Matched by name.) */
+export function isFavorite(state: AppState, name: string) {
+  const key = name.trim().toLowerCase();
+  return (state.favorites ?? []).some((f) => f.name.trim().toLowerCase() === key);
+}
+
+/** Star or un-star a food. Starring again replaces the saved numbers with the new ones. */
+export function setFavorite(state: AppState, food: SavedFood, on: boolean): AppState {
+  const key = food.name.trim().toLowerCase();
+  const rest = (state.favorites ?? []).filter((f) => f.name.trim().toLowerCase() !== key);
+  const { name, emoji, calories, protein, carbs, fat } = food;
+  return { ...state, favorites: on ? [{ name, emoji, calories, protein, carbs, fat }, ...rest] : rest };
+}
+
+/**
+ * Copies of some foods for another day, keeping each one's clock time
+ * (so yesterday's breakfast still lands under Breakfast).
+ */
+export function copyToDay(items: Entry[], day: string): Entry[] {
+  const base = parseDay(day);
+  return items.map((e) => {
+    const t = new Date(e.time);
+    const when = new Date(base.getFullYear(), base.getMonth(), base.getDate(), t.getHours(), t.getMinutes());
+    return { ...e, id: newId(), day, time: when.toISOString() };
+  });
+}
+
+/** The last 7 days, oldest first, ending with today (for Today's week strip). */
+export function weekDays(today = dayKey()) {
+  return Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+}
+
+/** Averages over a run of days, for the weekly summary. Only days with food count toward the averages. */
+export function periodStats(state: AppState, days: string[]) {
+  const goal = state.goals?.calories ?? 0;
+  const type = state.profile?.goal ?? 'lose';
+  const today = dayKey();
+  const perDay = days.map((d) => totals(entriesOn(state, d)));
+  const logged = perDay.filter((t) => t.calories > 0);
+  const avg = (f: (t: Macros) => number) => (logged.length ? Math.round(logged.reduce((a, t) => a + f(t), 0) / logged.length) : 0);
+  const onTarget = days.filter((d, i) => dayResult(perDay[i].calories, goal, type, d === today) === 'good').length;
+  const water = state.water ?? {};
+  const waterDays = days.filter((d) => (water[d] ?? 0) > 0);
+  const avgWater = waterDays.length ? waterDays.reduce((a, d) => a + water[d], 0) / waterDays.length : 0;
+  return {
+    loggedDays: logged.length,
+    calories: avg((t) => t.calories),
+    protein: avg((t) => t.protein),
+    onTarget,
+    water: Math.round(avgWater * 10) / 10,
+  };
+}
+
+/**
+ * When will you reach your goal weight?
+ * Uses the trend of the last 4 weeks of weigh-ins (needs at least 2, a week apart).
+ * If there isn't enough history yet, uses the plan's pace instead
+ * (the calorie target aims for about 0.5 kg a week to lose, 0.25 kg a week to gain).
+ */
+export function projectGoal(state: AppState, today = dayKey()) {
+  const target = state.targetKg;
+  const ws = [...state.weights].sort((a, b) => a.day.localeCompare(b.day));
+  const latest = ws[ws.length - 1];
+  if (!target || !latest) return null;
+  const left = target - latest.kg;
+  if (Math.abs(left) < 0.25) return { kind: 'reached' as const };
+
+  const from = addDays(today, -28);
+  const recent = ws.filter((w) => w.day >= from);
+  const dayNum = (d: string) => Math.round(parseDay(d).getTime() / 86400000);
+  let perDay = 0;
+  let basis: 'trend' | 'plan' = 'plan';
+  if (recent.length >= 2 && dayNum(recent[recent.length - 1].day) - dayNum(recent[0].day) >= 7) {
+    // Least-squares line through the recent weigh-ins: kg change per day.
+    const xs = recent.map((w) => dayNum(w.day));
+    const mx = xs.reduce((a, x) => a + x, 0) / xs.length;
+    const my = recent.reduce((a, w) => a + w.kg, 0) / recent.length;
+    let num = 0;
+    let den = 0;
+    recent.forEach((w, i) => {
+      num += (xs[i] - mx) * (w.kg - my);
+      den += (xs[i] - mx) ** 2;
+    });
+    perDay = den ? num / den : 0;
+    basis = 'trend';
+  } else {
+    const goal = state.profile?.goal;
+    perDay = goal === 'lose' ? -0.5 / 7 : goal === 'gain' ? 0.25 / 7 : 0;
+  }
+  // Moving the wrong way (or not at all): no date to promise.
+  if (perDay === 0 || Math.sign(perDay) !== Math.sign(left)) return { kind: 'stalled' as const, basis };
+  const days = Math.ceil(left / perDay);
+  if (days > 3 * 365) return { kind: 'stalled' as const, basis };
+  return { kind: 'date' as const, basis, day: addDays(today, days), perWeekKg: Math.abs(perDay * 7) };
 }
 
 // ---------- Dates and units ----------

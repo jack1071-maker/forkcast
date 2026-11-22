@@ -7,16 +7,16 @@ Expo SDK 58 + React Native + TypeScript + expo-router. Machine setup rules are i
 
 1. Core function: snap your food and see its calories and macros.
 2. Core loop: Snap → photo → AI estimate (editable) → Add → today's ring fills (< 30 s).
-3. Accessory features: setup that computes a calorie target (Mifflin-St Jeor), manual add, recent foods, weight log + chart, calendar history.
+3. Accessory features: setup that computes a calorie target (Mifflin-St Jeor), manual add, recent + starred (favorite) foods, quick add / copy a past meal, edit a logged food, water tracker, weight log + goal weight with projected date, weekly summary, calendar history.
 4. Screens (5): Setup, Today, Snap & Review, History, Progress.
-5. Retention hook: daily logging streak + "X kcal left" nudge. Meal reminders later.
+5. Retention hook: daily logging streak, the 7-day strip of goal circles on Today, and the "X cal left" nudge. Meal reminders later.
 
-Look (Ro-inspired, light; not a copy): warm off-white `#F6F5F2` background, white cards, near-black text and buttons, soft pastels for data (periwinkle ring `C.ring`, sage `C.good` / peach `C.over` with darker `goodText`/`overText` for text, sky/butter/lilac macros). Fonts: Barlow Condensed (headlines, big numbers, `F.head`) + Inter (everything else); custom fonts ignore `fontWeight`, so always use `F.*` families. No emojis in the UI: line icons in `src/components/icons.tsx`. Food is shown grouped by meal (`src/components/meals.tsx`, used by Today and History). Goal-aware colors: `dayResult()` in `src/lib/food.ts` (lose = at/under is good, gain = at/over is good, maintain = within 10%; today falling short is "pending") + `resultColor()` in `ui.ts`. Launch animation in `src/components/logo.tsx` (periwinkle ring fills around a dark fork; native splash shows only the fork at imageWidth 200). Web: status bar style `default` and `#root` padded with `env(safe-area-inset-*)` so nothing sits under the iPhone status bar / home bar. Name "Forkcast" is the user's own; never copy Cal AI's, WHOOP's or Ro's name, branding or exact screens.
+Look (Ro-inspired, light; not a copy): warm off-white `#F6F5F2` background, white cards, near-black text and buttons, soft pastels for data (periwinkle ring `C.ring`, sage `C.good` / peach `C.over` with darker `goodText`/`overText` for text, sky/butter/lilac macros). Fonts: Barlow Condensed (headlines, big numbers, `F.head`) + Inter (everything else); custom fonts ignore `fontWeight`, so always use `F.*` families. No emojis in the UI: line icons in `src/components/icons.tsx`. Food is shown grouped by meal (`src/components/meals.tsx`, used by Today and History): each food is ONE simple line (name left, calories right, lined up under the meal total; the user asked for this, no macros/time/X button in the list). Tapping a food opens the edit screen (`Review` with mode `edit`), which has the details, meal picker, star and Remove. Goal-aware colors: `dayResult()` in `src/lib/food.ts` (lose = at/under is good, gain = at/over is good, maintain = within 10%; today falling short is "pending") + `resultColor()` in `ui.ts`. Launch animation in `src/components/logo.tsx` (periwinkle ring fills around a dark fork; native splash shows only the fork at imageWidth 200). Web: status bar style `default` and `#root` padded with `env(safe-area-inset-*)` so nothing sits under the iPhone status bar / home bar. Name "Forkcast" is the user's own; never copy Cal AI's, WHOOP's or Ro's name, branding or exact screens.
 
 ## Code map
 
 - `src/app/index.tsx`: the brain. Holds the whole app state, picks the screen (tabs + overlays), saves to the device.
-- `src/lib/food.ts`: data model, calorie/macro maths, streak, dates/units, AsyncStorage load/save (key `forkcast-state-v1`). Weights stored in kg, heights in cm; `profile.units` decides display.
+- `src/lib/food.ts`: data model, calorie/macro maths, streak, dates/units, AsyncStorage load/save (key `forkcast-state-v1`). Weights stored in kg, heights in cm; `profile.units` decides display. Newer optional fields (`water` per day, `waterGoal`, `favorites`, `targetKg`) may be missing in old saved data, so always read them with `?? default`. Also `copyToDay`, `weekDays`, `periodStats` (weekly summary), `projectGoal` (goal-weight date: trend of last 28 days of weigh-ins, else the plan's pace).
 - `src/lib/analyze.ts`: photo → estimate. Shrinks the photo (1024 px JPEG), signs in silently, calls the `analyze-food` Edge Function. Falls back to sample meals only when `.env` is missing (`demo: true` banner).
 - `src/lib/supabase.ts`: Supabase client + `ensureSignedIn()` (anonymous sign-in, no email screens).
 - `supabase/functions/analyze-food/index.ts`: checks the user, enforces limits, calls Claude (`claude-opus-5-5`, effort low, JSON schema output, server-side fallbacks), refunds the count on failure.
@@ -46,7 +46,7 @@ Look (Ro-inspired, light; not a copy): warm off-white `#F6F5F2` background, whit
 
 ## Next steps
 
-- Ideas: meal reminders (notifications), README for the portfolio, security audit, delete the unused `forkcast`/`forkcast-2` Anthropic keys.
+- Ideas: meal reminders (notifications, phone only), editable water goal, new README screenshots of the week strip / water / weekly summary, security audit, delete the unused `forkcast`/`forkcast-2` Anthropic keys.
 
 ## Testing
 

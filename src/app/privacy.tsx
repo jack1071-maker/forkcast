@@ -12,7 +12,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: 'The short version',
     body: [
-      'Forkcast only collects what it needs to work: your email (if you make an account), the food, goals and weights you log, and the food photos you choose to analyze. It has no ads, no analytics and no tracking, and your data is never sold.',
+      'Forkcast only collects what it needs to work: your email (if you make an account), the food, water, goals and weights you log, and the food photos you choose to analyze. It has no ads, no analytics and no tracking, and your data is never sold.',
     ],
   },
   {
@@ -26,7 +26,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       'We store:',
       '• Your email address and a securely hashed version of your password (we can never see your actual password).',
-      '• Your Forkcast data: the details you entered in setup (age, sex, height, weight, activity, goal), your calorie and macro targets, the meals you logged and your weigh-ins.',
+      '• Your Forkcast data: the details you entered in setup (age, sex, height, weight, activity, goal), your calorie and macro targets, the meals you logged, your starred favorite foods, the glasses of water you logged, your weigh-ins and your goal weight.',
       'This is used only to back up your log and sync it between your devices.',
     ],
   },

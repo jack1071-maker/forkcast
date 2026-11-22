@@ -27,9 +27,14 @@ It gets its own icon and opens full screen like a normal app. You can log food b
 - **Animated launch.** The logo's ring fills up around the fork every time the app opens.
 - **A daily target made for you.** A quick setup asks your age, sex, height, weight, activity and goal, then works out your calories with the Mifflin-St Jeor equation and splits them into protein, carbs and fat.
 - **Today at a glance.** A calorie ring that fills as you eat (green or peach depending on whether your goal is to gain or lose), macro bars, and a nudge like *"You have 880 cal left today."*
-- **Add without a photo.** Type it in, or tap one of your recent foods to fill everything in at once.
+- **Your week in circles.** A row of mini rings across the top of Today shows the last 7 days, each colored by whether you hit your goal. Tap one to open that day.
+- **Water tracker.** Tap a glass to log it, toward 8 glasses a day.
+- **Add without a photo.** Type it in, or tap one of your recent or starred foods to fill everything in at once.
+- **Quick add.** Star a food and it shows up on Today for one-tap logging. Forgot breakfast? Copy yesterday's meal in one tap, or copy any meal from History.
+- **Edit anything.** Today's food is a simple list: tap a food to see its details, fix the numbers, move it to another meal, or remove it.
 - **History calendar.** Every day is colored by how it went for *your* goal: when losing, staying under is green; when gaining, going over is green. Tap a day for a summary card and its food grouped into Breakfast, Lunch, Snack and Dinner.
-- **Progress.** Log your weight and see your trend line, plus a 7-day calorie chart against your goal.
+- **Progress.** Log your weight and see your trend line. Set a goal weight and Forkcast shows how far along you are and the date you'll get there at your current pace.
+- **Weekly summary.** Average calories, days on target, protein and water for the last 7 days, compared with the week before, plus one plain-English tip.
 - **Streaks.** 🔥 Days in a row with food logged, so there's a reason to come back tomorrow.
 - **Accounts and cloud backup (optional).** Sign up with email and your log is backed up and synced across devices. There's also forgot password and delete account.
 - **Private by design.** Row Level Security means each account can only ever read or change its own data, and food photos are never stored.
@@ -42,9 +47,9 @@ I planned the app with a 5-step framework before building it:
 |---|---|
 | **Core function** | Snap your food and see its calories and macros |
 | **Core loop** (action → reward in under 30 seconds) | Snap → AI estimate → tweak → Add → the ring fills up |
-| **Accessory features** (only what supports the loop) | Goal setup, manual add, recent foods, history calendar, weight log and charts |
+| **Accessory features** (only what supports the loop) | Goal setup, manual add, recent and starred foods, copy a meal, edit a food, water, history calendar, weight goal and weekly summary |
 | **Surface area** (5–7 screens max) | 5 core screens: Setup, Today, Snap & Review, History, Progress (plus sign-in and privacy) |
-| **Retention hook** | Logging streak and the "cal left today" nudge |
+| **Retention hook** | Logging streak, the week of goal circles, and the "cal left today" nudge |
 
 ## How the AI part works (and stays safe)
 

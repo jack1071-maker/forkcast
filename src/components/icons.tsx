@@ -117,6 +117,47 @@ export const BarcodeIcon = (p: P) => (
   </Base>
 );
 
+/** Favorite star; `filled` paints it in. */
+export const StarIcon = ({ filled, ...p }: P & { filled?: boolean }) => (
+  <Base {...p}>
+    <Path
+      d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.9l-5.25 2.7 1-5.8L3.5 9.7l5.9-.9z"
+      fill={filled ? p.color ?? C.text : 'none'}
+    />
+  </Base>
+);
+
+/** A glass of water; `level` (0 to 1) fills it from the bottom. */
+export function GlassIcon({ level = 0, fill = C.protein, ...p }: P & { level?: number; fill?: string }) {
+  // The glass narrows from 14 wide at the top (y 3.5) to about 10.6 at the bottom (y 19.7).
+  const top = 19.7 - 14 * Math.max(0, Math.min(1, level));
+  const inset = (y: number) => 5 + ((y - 3.5) / 16.2) * 1.7;
+  const water = `M${inset(top)} ${top}H${24 - inset(top)}L${24 - inset(19.7)} 19.7H${inset(19.7)}z`;
+  return (
+    <Base {...p}>
+      {level > 0 ? <Path d={water} fill={fill} stroke="none" /> : null}
+      <Path d="M5 3.5h14l-1.7 16.2a1.5 1.5 0 0 1-1.5 1.3H8.2a1.5 1.5 0 0 1-1.5-1.3z" />
+    </Base>
+  );
+}
+
+/** Copy (two stacked sheets). */
+export const CopyIcon = (p: P) => (
+  <Base {...p}>
+    <Rect x={8.5} y={8.5} width={12} height={12} rx={2.5} />
+    <Path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5" />
+  </Base>
+);
+
+/** Target / goal. */
+export const TargetIcon = (p: P) => (
+  <Base {...p}>
+    <Circle cx={12} cy={12} r={8.5} />
+    <Circle cx={12} cy={12} r={4.5} />
+    <Circle cx={12} cy={12} r={0.8} />
+  </Base>
+);
+
 /** Meal-time icons, used instead of food emojis in the log. */
 export const SunriseIcon = (p: P) => (
   <Base {...p}>
@@ -147,8 +188,19 @@ export const SnackIcon = (p: P) => (
   </Base>
 );
 
+export const MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'] as const;
+export type MealName = (typeof MEALS)[number];
+
+/** A typical clock time for each meal, used when a food is moved to a different meal. */
+export const MEAL_HOUR: Record<MealName, [number, number]> = {
+  Breakfast: [8, 0],
+  Lunch: [12, 30],
+  Snack: [15, 30],
+  Dinner: [19, 0],
+};
+
 /** Picks a meal-time icon and label from the hour the food was logged. */
-export function mealFor(date: Date): { label: string; Icon: (p: P) => React.JSX.Element } {
+export function mealFor(date: Date): { label: MealName; Icon: (p: P) => React.JSX.Element } {
   const h = date.getHours();
   if (h >= 5 && h < 11) return { label: 'Breakfast', Icon: SunriseIcon };
   if (h >= 11 && h < 15) return { label: 'Lunch', Icon: SunIcon };

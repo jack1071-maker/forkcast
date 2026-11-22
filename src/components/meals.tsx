@@ -1,14 +1,28 @@
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CloseIcon, mealFor } from '@/components/icons';
+import { CopyIcon, mealFor } from '@/components/icons';
 import { Entry } from '@/lib/food';
-import { C, F, R } from '@/lib/ui';
+import { C, F, R, tapBuzz } from '@/lib/ui';
 
 /**
  * A day's food, organised into meal cards (Breakfast, Lunch, Snack, Dinner) in the order they were eaten.
  * Each card shows its own calorie total, then one clean line per food.
  */
-export function MealList({ entries, onDelete }: { entries: Entry[]; onDelete?: (id: string) => void }) {
+export function MealList({
+  entries,
+  onDelete,
+  onEdit,
+  onCopy,
+  copyLabel = 'Copy to today',
+}: {
+  entries: Entry[];
+  onDelete?: (id: string) => void;
+  /** Tap a food to change it. */
+  onEdit?: (entry: Entry) => void;
+  /** Shows a button on each meal card that copies the whole meal (e.g. into today). */
+  onCopy?: (items: Entry[]) => void;
+  copyLabel?: string;
+}) {
   const groups: { label: string; Icon: ReturnType<typeof mealFor>['Icon']; items: Entry[] }[] = [];
   for (const e of [...entries].sort((a, b) => a.time.localeCompare(b.time))) {
     const { label, Icon } = mealFor(new Date(e.time));
@@ -40,8 +54,26 @@ export function MealList({ entries, onDelete }: { entries: Entry[]; onDelete?: (
               </Text>
             </View>
             {g.items.map((e) => (
-              <FoodLine key={e.id} entry={e} onDelete={onDelete ? () => confirmDelete(e, onDelete) : undefined} />
+              <FoodLine
+                key={e.id}
+                entry={e}
+                onEdit={onEdit ? () => onEdit(e) : undefined}
+                onDelete={onDelete ? () => confirmDelete(e, onDelete) : undefined}
+              />
             ))}
+            {onCopy ? (
+              <Pressable
+                onPress={() => {
+                  tapBuzz();
+                  onCopy(g.items);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${copyLabel}: ${g.label}`}
+                style={({ pressed }) => [st.copy, pressed && { opacity: 0.6 }]}>
+                <CopyIcon size={16} color={C.text} />
+                <Text style={st.copyText}>{copyLabel}</Text>
+              </Pressable>
+            ) : null}
           </View>
         );
       })}
@@ -49,40 +81,27 @@ export function MealList({ entries, onDelete }: { entries: Entry[]; onDelete?: (
   );
 }
 
-/** One food: name and time on the left, its macros underneath, calories on the right. */
-function FoodLine({ entry, onDelete }: { entry: Entry; onDelete?: () => void }) {
-  const time = new Date(entry.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+/**
+ * One food, kept simple: its name on the left and calories on the right, lined up under the meal total.
+ * Tap it to see the full details (macros, servings) and to edit or remove it.
+ */
+function FoodLine({ entry, onEdit, onDelete }: { entry: Entry; onEdit?: () => void; onDelete?: () => void }) {
   return (
-    <Pressable onLongPress={onDelete} accessibilityHint={onDelete ? 'Long press to remove' : undefined} style={st.line}>
-      <View style={{ flex: 1, gap: 5 }}>
-        <Text style={st.name} numberOfLines={1}>
-          {entry.name}
-        </Text>
-        <View style={st.macros}>
-          <Text style={st.time}>{time}</Text>
-          <Macro color={C.protein} grams={entry.protein} label="P" />
-          <Macro color={C.carbs} grams={entry.carbs} label="C" />
-          <Macro color={C.fat} grams={entry.fat} label="F" />
-        </View>
-      </View>
-      <Text style={st.cal}>{entry.calories.toLocaleString()}</Text>
-      {onDelete ? (
-        <Pressable onPress={onDelete} hitSlop={12} accessibilityLabel={`Remove ${entry.name}`} style={st.remove}>
-          <CloseIcon size={14} color={C.muted} />
-        </Pressable>
-      ) : null}
-    </Pressable>
-  );
-}
-
-function Macro({ color, grams, label }: { color: string; grams: number; label: string }) {
-  return (
-    <View style={st.macro}>
-      <View style={[st.dot, { backgroundColor: color }]} />
-      <Text style={st.macroText}>
-        {grams}g {label}
+    <Pressable
+      onPress={onEdit}
+      onLongPress={onDelete}
+      disabled={!onEdit && !onDelete}
+      accessibilityRole={onEdit ? 'button' : undefined}
+      accessibilityHint={onEdit ? 'Tap to see details and edit' : undefined}
+      style={({ pressed }) => [st.line, pressed && onEdit ? { opacity: 0.6 } : null]}>
+      <Text style={st.name} numberOfLines={1}>
+        {entry.name}
       </Text>
-    </View>
+      <Text style={st.cal}>
+        {entry.calories.toLocaleString()}
+        <Text style={st.unit}> CAL</Text>
+      </Text>
+    </Pressable>
   );
 }
 
@@ -107,13 +126,17 @@ const st = StyleSheet.create({
   count: { flex: 1, color: C.muted, fontFamily: F.medium, fontSize: 12 },
   mealCal: { color: C.text, fontFamily: F.head, fontSize: 20 },
   unit: { color: C.muted, fontFamily: F.headSemi, fontSize: 12, letterSpacing: 0.8 },
-  line: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.line },
-  name: { color: C.text, fontFamily: F.semi, fontSize: 15 },
-  macros: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  time: { color: C.muted, fontFamily: F.medium, fontSize: 12, minWidth: 58 },
-  macro: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  macroText: { color: C.muted, fontFamily: F.medium, fontSize: 12 },
-  cal: { color: C.text, fontFamily: F.head, fontSize: 22 },
-  remove: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderTopWidth: 1, borderTopColor: C.line },
+  name: { flex: 1, color: C.text, fontFamily: F.medium, fontSize: 15 },
+  cal: { color: C.text, fontFamily: F.head, fontSize: 20 },
+  copy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: C.line,
+  },
+  copyText: { color: C.text, fontFamily: F.semi, fontSize: 13, letterSpacing: 0.6, textTransform: 'uppercase' },
 });

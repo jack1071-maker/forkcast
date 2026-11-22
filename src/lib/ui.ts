@@ -31,6 +31,10 @@ export const C = {
   protein: '#8FB8EE',
   carbs: '#F2CC6B',
   fat: '#C3A9EE',
+  /** Favorite star (a deeper butter, readable on white). */
+  star: '#B8901F',
+  /** Water glasses. */
+  water: '#8FB8EE',
 };
 
 /** Color for a day's result (see dayResult in lib/food.ts). */

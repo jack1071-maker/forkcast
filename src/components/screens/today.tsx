@@ -1,21 +1,46 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Headline, MacroBar, Ring, s } from '@/components/bits';
-import { CameraIcon, FlameIcon } from '@/components/icons';
+import { CameraIcon, CopyIcon, FlameIcon, GlassIcon, StarIcon, mealFor } from '@/components/icons';
 import { MealList } from '@/components/meals';
-import { AppState, GoalType, dayKey, dayResult, entriesOn, logStreak, totals } from '@/lib/food';
-import { C, F, R } from '@/lib/ui';
+import {
+  AppState,
+  Entry,
+  GoalType,
+  ML_PER_GLASS,
+  SavedFood,
+  addDays,
+  dayKey,
+  dayResult,
+  entriesOn,
+  logStreak,
+  parseDay,
+  totals,
+  weekDays,
+} from '@/lib/food';
+import { C, F, R, resultColor, tapBuzz } from '@/lib/ui';
 
 export function Today({
   state,
   onSnap,
   onManual,
-  onDelete,
+  onEdit,
+  onQuickAdd,
+  onCopyMeal,
+  onWater,
+  onOpenDay,
 }: {
   state: AppState;
   onSnap: () => void;
   onManual: () => void;
-  onDelete: (id: string) => void;
+  onEdit: (entry: Entry) => void;
+  /** One-tap add of a starred food. */
+  onQuickAdd: (food: SavedFood) => void;
+  /** Copy a past meal's foods into today. */
+  onCopyMeal: (items: Entry[]) => void;
+  onWater: (glasses: number) => void;
+  /** Open a past day in History. */
+  onOpenDay: (day: string) => void;
 }) {
   const goals = state.goals!;
   const today = dayKey();
@@ -32,6 +57,19 @@ export function Today({
   const pct = Math.round((t.calories / goals.calories) * 100);
   const dateLabel = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
 
+  // Quick add: yesterday's meals that aren't logged yet today, then starred foods.
+  const loggedMeals = new Set(list.map((e) => mealFor(new Date(e.time)).label));
+  const yesterdayMeals: { label: string; items: Entry[]; calories: number }[] = [];
+  for (const e of entriesOn(state, addDays(today, -1))) {
+    const label = mealFor(new Date(e.time)).label;
+    if (loggedMeals.has(label)) continue;
+    let g = yesterdayMeals.find((m) => m.label === label);
+    if (!g) yesterdayMeals.push((g = { label, items: [], calories: 0 }));
+    g.items.push(e);
+    g.calories += e.calories;
+  }
+  const favorites = state.favorites ?? [];
+
   return (
     <ScrollView contentContainerStyle={st.wrap}>
       <View style={st.top}>
@@ -47,6 +85,8 @@ export function Today({
           </Text>
         </View>
       </View>
+
+      <WeekStrip state={state} today={today} onOpenDay={onOpenDay} />
 
       <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
         <Text style={st.label}>Calories</Text>
@@ -72,18 +112,179 @@ export function Today({
         </View>
       </Card>
 
+      <Water
+        glasses={state.water?.[today] ?? 0}
+        goal={state.waterGoal ?? 8}
+        metric={state.profile?.units === 'metric'}
+        onChange={onWater}
+      />
+
       <Text style={st.nudge}>{nudge(list.length, left, goalType)}</Text>
 
       <Button title="Snap your food" icon={(c) => <CameraIcon size={20} color={c} />} onPress={onSnap} />
       <Button title="Add without a photo" kind="secondary" onPress={onManual} />
 
+      {yesterdayMeals.length > 0 || favorites.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <Text style={[st.label, { marginTop: 4 }]}>Quick add</Text>
+          <View style={st.quickWrap}>
+            {yesterdayMeals.map((m) => (
+              <QuickChip
+                key={m.label}
+                icon={<CopyIcon size={14} color={C.text} />}
+                text={`Yesterday's ${m.label.toLowerCase()}`}
+                cal={m.calories}
+                label={`Copy yesterday's ${m.label.toLowerCase()} to today`}
+                onPress={() => onCopyMeal(m.items)}
+              />
+            ))}
+            {favorites.map((f) => (
+              <QuickChip
+                key={f.name}
+                icon={<StarIcon size={14} color={C.star} filled />}
+                text={f.name}
+                cal={f.calories}
+                label={`Add ${f.name} to today`}
+                onPress={() => onQuickAdd(f)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       <Text style={[st.label, { marginTop: 10 }]}>Today&apos;s food</Text>
       {list.length === 0 ? (
         <Text style={s.muted}>Nothing logged yet. Your first meal starts the day&apos;s count.</Text>
       ) : (
-        <MealList entries={list} onDelete={onDelete} />
+        <MealList entries={list} onEdit={onEdit} />
       )}
     </ScrollView>
+  );
+}
+
+/** The last 7 days: a small ring per day, filled by calories and colored by the goal result. */
+function WeekStrip({ state, today, onOpenDay }: { state: AppState; today: string; onOpenDay: (day: string) => void }) {
+  const goal = state.goals?.calories ?? 2000;
+  const type = state.profile?.goal ?? 'lose';
+  return (
+    <View style={st.week}>
+      {weekDays(today).map((d) => {
+        const cal = totals(entriesOn(state, d)).calories;
+        const result = dayResult(cal, goal, type, d === today);
+        const isToday = d === today;
+        const future = d > today;
+        const date = parseDay(d);
+        return (
+          <Pressable
+            key={d}
+            disabled={future || isToday}
+            onPress={() => {
+              tapBuzz();
+              onOpenDay(d);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${date.toLocaleDateString([], { weekday: 'long' })}: ${cal ? `${cal} cal` : 'nothing logged'}`}
+            style={[st.weekDay, isToday && st.weekToday, future && { opacity: 0.35 }]}>
+            <Text style={[st.weekLetter, isToday && { color: C.text }]}>
+              {date.toLocaleDateString([], { weekday: 'short' }).slice(0, 1)}
+            </Text>
+            <Ring size={34} stroke={3.5} progress={cal / goal} color={resultColor(result)}>
+              <Text style={st.weekNum}>{date.getDate()}</Text>
+            </Ring>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Water: one glass per tap. Tapping the last filled glass empties it again. */
+function Water({
+  glasses,
+  goal,
+  metric,
+  onChange,
+}: {
+  glasses: number;
+  goal: number;
+  metric: boolean;
+  onChange: (n: number) => void;
+}) {
+  const shown = Math.max(goal, glasses);
+  const amount = metric ? `${Math.round(glasses * ML_PER_GLASS) / 1000} L` : `${glasses * 8} oz`;
+  return (
+    <Card>
+      <View style={st.waterTop}>
+        <Text style={st.label}>Water</Text>
+        <Text style={st.waterCount}>
+          {glasses}
+          <Text style={st.waterGoal}> / {goal} GLASSES · {amount.toUpperCase()}</Text>
+        </Text>
+      </View>
+      <View style={st.glasses}>
+        {Array.from({ length: shown }, (_, i) => {
+          const full = i < glasses;
+          return (
+            <Pressable
+              key={i}
+              hitSlop={4}
+              onPress={() => {
+                tapBuzz();
+                onChange(glasses === i + 1 ? i : i + 1);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={full ? `Remove glass ${i + 1}` : `Log glass ${i + 1}`}
+              style={({ pressed }) => [st.glass, pressed && { transform: [{ scale: 0.9 }] }]}>
+              <GlassIcon size={26} level={full ? 0.8 : 0} fill={C.water} color={full ? C.text : C.muted} />
+            </Pressable>
+          );
+        })}
+        {glasses >= goal ? (
+          <Pressable
+            hitSlop={4}
+            onPress={() => {
+              tapBuzz();
+              onChange(glasses + 1);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Log another glass"
+            style={[st.glass, st.morePill]}>
+            <Text style={st.more}>+1</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
+function QuickChip({
+  icon,
+  text,
+  cal,
+  label,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  cal: number;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        tapBuzz();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [st.chip, pressed && { opacity: 0.6, transform: [{ scale: 0.97 }] }]}>
+      {icon}
+      <Text style={st.chipText} numberOfLines={1}>
+        {text}
+      </Text>
+      <Text style={st.chipCal}>{cal.toLocaleString()}</Text>
+    </Pressable>
   );
 }
 
@@ -141,4 +342,31 @@ const st = StyleSheet.create({
   statLabel: { color: C.muted, fontFamily: F.semi, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', marginTop: 2 },
   macros: { flexDirection: 'row', gap: 16, alignSelf: 'stretch' },
   nudge: { color: C.muted, fontSize: 14, fontFamily: F.medium, textAlign: 'center' },
+  week: { flexDirection: 'row', justifyContent: 'space-between' },
+  weekDay: { alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 3, borderRadius: R.md, minWidth: 42 },
+  weekToday: { backgroundColor: C.card, borderWidth: 1, borderColor: C.line },
+  weekLetter: { color: C.muted, fontFamily: F.semi, fontSize: 11, letterSpacing: 1 },
+  weekNum: { color: C.text, fontFamily: F.semi, fontSize: 12 },
+  waterTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  waterCount: { color: C.text, fontFamily: F.head, fontSize: 22 },
+  waterGoal: { color: C.muted, fontFamily: F.headSemi, fontSize: 13, letterSpacing: 0.8 },
+  glasses: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, alignItems: 'center' },
+  glass: { width: 32, height: 38, alignItems: 'center', justifyContent: 'center' },
+  morePill: { borderRadius: 999, backgroundColor: C.cardHi, width: 38, height: 30 },
+  more: { color: C.text, fontFamily: F.semi, fontSize: 13 },
+  quickWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.card,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: C.line,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    maxWidth: '100%',
+  },
+  chipText: { color: C.text, fontFamily: F.semi, fontSize: 14, flexShrink: 1 },
+  chipCal: { color: C.muted, fontFamily: F.medium, fontSize: 13 },
 });
