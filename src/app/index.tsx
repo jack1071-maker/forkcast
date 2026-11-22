@@ -56,6 +56,8 @@ export default function App() {
   const stateRef = useRef<AppState | null>(null);
   stateRef.current = state;
   const syncedUserId = useRef<string | null>(null);
+  /** False until the first download/upload after signing in has finished. No uploads before then. */
+  const syncReady = useRef(false);
   const skipNextPush = useRef(false);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,6 +73,11 @@ export default function App() {
 
   /** Replace this device's data with the online copy (without uploading it straight back). */
   const applyCloud = (cloudState: AppState) => {
+    // Drop any upload still waiting, so it can't send the old copy after this.
+    if (pushTimer.current) {
+      clearTimeout(pushTimer.current);
+      pushTimer.current = null;
+    }
     skipNextPush.current = true;
     setState(cloudState);
   };
@@ -83,6 +90,7 @@ export default function App() {
     }
     if (syncedUserId.current === user.id) return;
     syncedUserId.current = user.id;
+    syncReady.current = false;
     // Leave the sign-in screen, returning to the snap screen if that's where they came from.
     setOverlay((o) => (o === 'signUp' || o === 'signIn' ? afterAuth : o));
     setAfterAuth(null);
@@ -103,6 +111,8 @@ export default function App() {
         setSync('synced');
       } catch {
         setSync('error');
+      } finally {
+        syncReady.current = true;
       }
     })();
     // Runs when the signed-in user changes (state is read through stateRef).
@@ -111,7 +121,8 @@ export default function App() {
 
   // Upload changes a moment after they happen, while signed in.
   useEffect(() => {
-    if (!user || !state || syncedUserId.current !== user.id) return;
+    // Wait for the first download after signing in, so this device's old copy can't overwrite the account's.
+    if (!user || !state || syncedUserId.current !== user.id || !syncReady.current) return;
     if (skipNextPush.current) {
       skipNextPush.current = false;
       return;
