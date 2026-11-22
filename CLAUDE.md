@@ -26,16 +26,26 @@ Look: dark navy + aqua (`src/lib/ui.ts`), Anton headlines. Name "Forkcast" is th
 
 ## AI setup (done)
 
-- Supabase project `forkcast` (ref jutyqwzqjhdvndxzmpkz, ca-central-1) in the jack1071-maker org. Anonymous sign-ins ON (pushed from `supabase/config.toml`). DB password in `.db-password` (gitignored).
+- Supabase project `forkcast` (ref jutyqwzqjhdvndxzmpkz, ca-central-1) in the jack1071-maker org. Email accounts (confirm email OFF, anonymous sign-ins OFF), site URL = the live web app; all pushed from `supabase/config.toml` with `npx.cmd supabase config push --yes`. DB password in `.db-password` (gitignored).
+- Photo AI needs an email account AND the invite code (secret `FORKCAST_INVITE_CODE`, also saved in `.invite-code`, gitignored). Accounts that entered it are in `ai_access`. To change it: `npx.cmd supabase secrets set FORKCAST_INVITE_CODE=new-code --yes`.
+- Accounts + sync work like habit-tracker: `user_state` (one JSON row per user, RLS), `delete_my_account()`, `src/lib/cloud.ts`, `src/lib/use-account.ts`, `src/components/screens/auth.tsx`, sync logic in `src/app/index.tsx`. Account card + privacy link live on the Progress tab. Update `src/app/privacy.tsx` if the app starts collecting anything new.
 - Limits: 10 photos per user, 50 total per UTC day (constants at the top of the function). The user chose these for a demo.
 - `ANTHROPIC_API_KEY` is a Supabase function secret. The user's key is a personal key (`sk-ant-usr-...`, "forkcast-3") that **expires Dec 22, 2026**; when photos stop working, make a new key and replace the secret. $5 prepaid credit, no auto-reload.
 - Never type or paste the key yourself. Copying from the in-app browser pane does NOT reach the user's clipboard, so have them copy/paste in their normal browser.
 - Deploy: `npx.cmd supabase functions deploy analyze-food --use-api --yes`. DB changes: new file in `supabase/migrations`, then `npx.cmd supabase db push --remote --password <.db-password> --yes`. Logs: `npx.cmd supabase logs --remote --since 30m --output-format text`.
 - `.env` holds the public URL + publishable key (gitignored). For `eas update` they must also be EAS env vars.
 
+## Publishing
+
+- GitHub (public): https://github.com/jack1071-maker/forkcast
+- Web: `npm.cmd run deploy:web` (exports, adds Home Screen tags with scripts/add-web-tags.js, deploys) → https://jack1071-forkcast.expo.app. Never add `src/app/+html.tsx`. Before deploying, check `dist/index.html` has 5 `<script` tags with `src=`.
+- Phone (Expo Go): `npx.cmd eas-cli@latest update --branch main --environment production --message "..." --non-interactive`. EAS project @jack1071/forkcast (c36aaba3-4062-45e8-8ff2-ff923378e666); Supabase URL + publishable key are EAS production env vars (`eas update` ignores `.env`). Expo Go link: `exp://u.expo.dev/c36aaba3-4062-45e8-8ff2-ff923378e666?channel-name=main`. Keep `runtimeVersion.policy` = `sdkVersion`.
+- Icons: `python scripts/make-icons.py` redraws every icon size.
+- After a change works: commit + push, then phone update + web deploy so all three match.
+
 ## Next steps
 
-- Later: email accounts + sync (anonymous users can be upgraded), GitHub, EAS Update + web deploy (reuse habit-tracker's `scripts/add-web-tags.js`; never add `src/app/+html.tsx`), privacy page (photos go to Anthropic), README.
+- Ideas: meal reminders (notifications), README for the portfolio, security audit, delete the unused `forkcast`/`forkcast-2` Anthropic keys.
 
 ## Testing
 
