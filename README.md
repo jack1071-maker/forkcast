@@ -21,7 +21,9 @@ It gets its own icon and opens full screen like a normal app. You can log food b
 
 ## Features
 
-- **📸 Snap → estimate → add.** Take a photo (or pick one) and Claude AI names the food, picks an emoji, and estimates calories and macros. Everything is editable, with a servings stepper, before it goes in your log.
+- **📸 Snap → estimate → add.** Take a photo (or pick one) and Claude AI names the food and estimates calories and macros. Everything is editable, with a servings stepper, before it goes in your log.
+- **Barcode lookup.** Snap the barcode on a packaged food and Forkcast reads it and pulls the exact label nutrition from [Open Food Facts](https://world.openfoodfacts.org), a free public food database. No barcode match? You get the AI estimate instead.
+- **Animated launch.** The logo's ring fills up around the fork every time the app opens.
 - **A daily target made for you.** A quick setup asks your age, sex, height, weight, activity and goal, then works out your calories with the Mifflin-St Jeor equation and splits them into protein, carbs and fat.
 - **Today at a glance.** A calorie ring that fills as you eat (and turns orange if you go over), macro bars, and a nudge like *"You have 880 kcal left today."*
 - **Add without a photo.** Type it in, or tap one of your recent foods to fill everything in at once.
@@ -61,7 +63,7 @@ I planned the app with a 5-step framework before building it:
 - **The Claude API key never ships in the app.** It's stored as a server secret on a Supabase Edge Function, so nobody can pull it out of the website or phone app.
 - **Only signed-in accounts that entered the invite code** can use the AI.
 - **Daily limits** (per person and for the whole app) are enforced in Postgres with a locked counter, so even rapid-fire requests can't slip past. If the AI call fails, the photo doesn't count against your limit.
-- **Structured output:** Claude replies in a fixed JSON shape (name, emoji, calories, protein, carbs, fat, confidence), so the app never has to guess at free text. Not-food photos get a friendly "try another photo".
+- **Structured output:** Claude replies in a fixed JSON shape (name, calories, protein, carbs, fat, confidence, barcode). Barcodes are checked with their checksum digit before the database lookup, so the app never has to guess at free text. Not-food photos get a friendly "try another photo".
 
 ## Built with
 

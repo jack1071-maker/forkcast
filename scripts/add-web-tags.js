@@ -11,10 +11,17 @@ const TAGS = [
   '<meta name="mobile-web-app-capable" content="yes"/>',
   '<meta name="apple-mobile-web-app-title" content="Forkcast"/>',
   '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>',
-  '<meta name="theme-color" content="#0B1426"/>',
+  '<meta name="theme-color" content="#000000"/>',
   '<meta name="description" content="Snap your food, see the calories, hit your goal."/>',
   '<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>',
   '<link rel="manifest" href="/manifest.json"/>',
+  // Home Screen apps on iPhone draw under the status bar, but `height: 100%` leaves a strip uncovered,
+  // which showed as a white band. Pin the page to the whole screen and make everything behind the app black.
+  '<style id="forkcast-fit">' +
+    'html,body{background-color:#000;margin:0;padding:0}' +
+    'body{position:fixed;top:0;right:0;bottom:0;left:0;overscroll-behavior:none;-webkit-text-size-adjust:100%}' +
+    '#root{width:100%;height:100%;background-color:#000}' +
+    '</style>',
 ].join('');
 
 function htmlFiles(dir) {

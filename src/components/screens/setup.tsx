@@ -12,7 +12,7 @@ import {
   kgToLb,
   lbToKg,
 } from '@/lib/food';
-import { C } from '@/lib/ui';
+import { C, F } from '@/lib/ui';
 
 /** First-run setup (and "Edit goals" later): works out a daily calorie target. */
 export function Setup({
@@ -146,7 +146,7 @@ export function Setup({
       <Button title={initial ? 'Save goals' : "Let's go"} disabled={!valid} onPress={() => onSave(profile)} />
       {onCancel ? <Button title="Cancel" kind="ghost" onPress={onCancel} /> : null}
       {onSignIn ? <Button title="I already have an account" kind="ghost" onPress={onSignIn} /> : null}
-      <Text style={[s.muted, { fontSize: 12, textAlign: 'center' }]}>
+      <Text style={[s.muted, { fontFamily: F.body, fontSize: 12, textAlign: 'center' }]}>
         Estimates only, not medical advice. Uses the Mifflin-St Jeor equation.
       </Text>
     </ScrollView>

@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { C, HEADLINE, R, tapBuzz } from '@/lib/ui';
+import { C, F, R, tapBuzz } from '@/lib/ui';
 
 /** Big round progress ring with the number in the middle. */
 export function Ring({
@@ -67,9 +67,12 @@ export function Button({
   kind = 'primary',
   disabled,
   style,
+  icon,
 }: {
   title: string;
   onPress: () => void;
+  /** Optional icon drawn before the label, in the label's color. */
+  icon?: (color: string) => ReactNode;
   kind?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -89,6 +92,7 @@ export function Button({
         { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
         style,
       ]}>
+      {icon ? icon(fg) : null}
       <Text style={[s.buttonText, { color: fg }]}>{title}</Text>
     </Pressable>
   );
@@ -99,7 +103,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Headline({ children, size = 34 }: { children: ReactNode; size?: number }) {
-  return <Text style={[s.headline, { fontSize: size, lineHeight: size * 1.2 }]}>{children}</Text>;
+  return <Text style={[s.headline, { fontSize: size, lineHeight: size * 1.1 }]}>{children}</Text>;
 }
 
 /** A row of pill buttons where exactly one is chosen. */
@@ -179,15 +183,15 @@ export function num(v: string) {
 }
 
 export const s = StyleSheet.create({
-  headline: { fontFamily: HEADLINE, color: C.text, letterSpacing: 0.5 },
-  card: { backgroundColor: C.card, borderRadius: R.lg, padding: 18, gap: 12 },
-  macroLabel: { color: C.muted, fontSize: 13, fontWeight: '600' },
-  macroValue: { color: C.text, fontSize: 15, fontWeight: '700' },
-  macroGoal: { color: C.muted, fontWeight: '500' },
-  barTrack: { height: 8, borderRadius: 4, backgroundColor: C.line, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4 },
-  button: { borderRadius: R.md, paddingVertical: 16, paddingHorizontal: 18, alignItems: 'center' },
-  buttonText: { fontSize: 17, fontWeight: '700' },
+  headline: { fontFamily: F.head, color: C.text, letterSpacing: 1, textTransform: 'uppercase' },
+  card: { backgroundColor: C.card, borderRadius: R.lg, padding: 18, gap: 12, borderWidth: 1, borderColor: '#1A1B1F' },
+  macroLabel: { color: C.muted, fontSize: 11, fontFamily: F.semi, letterSpacing: 1.2, textTransform: 'uppercase' },
+  macroValue: { color: C.text, fontSize: 20, fontFamily: F.head, letterSpacing: 0.3 },
+  macroGoal: { color: C.muted, fontFamily: F.headSemi, fontSize: 14 },
+  barTrack: { height: 4, borderRadius: 2, backgroundColor: C.line, overflow: 'hidden' },
+  barFill: { height: 4, borderRadius: 2 },
+  button: { borderRadius: R.md, paddingVertical: 16, paddingHorizontal: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  buttonText: { fontSize: 15, fontFamily: F.bold, letterSpacing: 1.4, textTransform: 'uppercase' },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choice: {
     paddingVertical: 10,
@@ -197,8 +201,8 @@ export const s = StyleSheet.create({
     borderColor: C.line,
     backgroundColor: C.card,
   },
-  choiceText: { color: C.text, fontSize: 15, fontWeight: '600' },
-  fieldLabel: { color: C.muted, fontSize: 13, fontWeight: '600' },
+  choiceText: { color: C.text, fontSize: 14, fontFamily: F.semi },
+  fieldLabel: { color: C.muted, fontSize: 11, fontFamily: F.semi, letterSpacing: 1.2, textTransform: 'uppercase' },
   fieldBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -206,8 +210,8 @@ export const s = StyleSheet.create({
     borderRadius: R.sm,
     paddingHorizontal: 14,
   },
-  fieldInput: { flex: 1, color: C.text, fontSize: 18, fontWeight: '600', paddingVertical: 12, minWidth: 0 },
-  fieldSuffix: { color: C.muted, fontSize: 15, marginLeft: 6 },
-  muted: { color: C.muted, fontSize: 15 },
-  body: { color: C.text, fontSize: 16 },
+  fieldInput: { flex: 1, color: C.text, fontSize: 18, fontFamily: F.semi, paddingVertical: 12, minWidth: 0 },
+  fieldSuffix: { color: C.muted, fontFamily: F.body, fontSize: 15, marginLeft: 6 },
+  muted: { color: C.muted, fontFamily: F.body, fontSize: 15 },
+  body: { color: C.text, fontFamily: F.body, fontSize: 16 },
 });

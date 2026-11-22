@@ -10,6 +10,11 @@ export type FoodGuess = Macros & {
   /** True when this is a sample meal (the app was built without the AI server). */
   demo: boolean;
   confidence?: 'low' | 'medium' | 'high';
+  /** 'database' = exact label numbers found by the barcode in Open Food Facts; 'ai' = Claude's estimate. */
+  from?: 'database' | 'ai';
+  barcode?: string;
+  /** What one serving is, for database matches (e.g. "1 bar (40 g)"). */
+  serving?: string;
 };
 
 /** A problem we can show to the person as-is. `code` says what to offer next (e.g. the invite box). */
@@ -67,6 +72,9 @@ export async function analyzePhoto(uri: string, inviteCode?: string): Promise<Fo
     carbs: data.carbs,
     fat: data.fat,
     confidence: data.confidence,
+    from: data.from,
+    barcode: data.barcode,
+    serving: data.serving,
     demo: false,
   };
 }

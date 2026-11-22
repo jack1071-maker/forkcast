@@ -34,6 +34,8 @@ Identify the food and estimate the portion actually shown, using plates, hands, 
 Give totals for everything visible as one serving: calories (kcal) and grams of protein, carbs and fat, as whole numbers.
 Keep the name short and plain (under 40 characters), like "Chicken burrito bowl" or "2 slices pepperoni pizza".
 Pick one emoji that fits the food.
+If a product barcode (EAN or UPC) is clearly readable, copy its digits exactly into barcode (digits only). If you can't read every digit with confidence, leave barcode empty; never guess digits.
+A photo of just a packaged food or its barcode counts as food: estimate one serving from the label if you can read it.
 If the photo shows no food or drink, set is_food to false and use 0 for the numbers.`;
 
 const SCHEMA = {
@@ -47,10 +49,67 @@ const SCHEMA = {
     carbs: { type: 'integer' },
     fat: { type: 'integer' },
     confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+    barcode: { type: 'string' },
   },
-  required: ['is_food', 'name', 'emoji', 'calories', 'protein', 'carbs', 'fat', 'confidence'],
+  required: ['is_food', 'name', 'emoji', 'calories', 'protein', 'carbs', 'fat', 'confidence', 'barcode'],
   additionalProperties: false,
 };
+
+/** True if the digits are a real EAN-8, UPC-A (12) or EAN-13 code (the last digit is a checksum). */
+function validBarcode(code: string) {
+  if (!/^(\d{8}|\d{12}|\d{13})$/.test(code)) return false;
+  const digits = code.split('').map(Number);
+  const check = digits.pop()!;
+  const sum = digits.reverse().reduce((t, d, i) => t + d * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10 === check;
+}
+
+type Label = { name: string; calories: number; protein: number; carbs: number; fat: number; serving: string };
+
+/**
+ * Looks a barcode up in Open Food Facts (openfoodfacts.org), a free public database of packaged foods.
+ * Only the barcode number is sent. Returns the label's numbers for one serving, or null if not found.
+ */
+async function lookupBarcode(code: string): Promise<Label | null> {
+  try {
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity`,
+      { headers: { 'User-Agent': 'Forkcast/1.0 (calorie tracker)' }, signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const p = data?.product;
+    const nut = p?.nutriments;
+    if (data?.status !== 1 || !p?.product_name || !nut) return null;
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : Number(v));
+    // Prefer the label's "per serving" numbers; otherwise scale "per 100 g" by the serving size.
+    const servingG = num(p.serving_quantity);
+    const per = (key: string) => {
+      const serving = num(nut[`${key}_serving`]);
+      if (Number.isFinite(serving)) return serving;
+      const per100 = num(nut[`${key}_100g`]);
+      if (!Number.isFinite(per100)) return NaN;
+      return Number.isFinite(servingG) && servingG > 0 ? (per100 * servingG) / 100 : per100;
+    };
+    const calories = per('energy-kcal');
+    if (!Number.isFinite(calories)) return null;
+    const hasServing = Number.isFinite(num(nut['energy-kcal_serving'])) || (Number.isFinite(servingG) && servingG > 0);
+    const brand = String(p.brands ?? '').split(',')[0].trim();
+    const name = String(p.product_name).trim();
+    const r = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+    return {
+      // Add the brand only if the name doesn't already include it ("Coca-Cola Original" stays as is).
+      name: (brand && !name.toLowerCase().includes(brand.toLowerCase().split(/\s+/)[0]) ? `${brand} ${name}` : name).slice(0, 60),
+      calories: r(calories),
+      protein: r(per('proteins')),
+      carbs: r(per('carbohydrates')),
+      fat: r(per('fat')),
+      serving: hasServing ? String(p.serving_size || `${servingG} g`) : '100 g',
+    };
+  } catch {
+    return null; // Database slow or down: fall back to the AI estimate.
+  }
+}
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -152,6 +211,28 @@ Deno.serve(async (req) => {
       return reply(200, { isFood: false, message: "That doesn't look like food. Try another photo." });
     }
     const n = (v: unknown) => Math.max(0, Math.round(Number(v) || 0));
+
+    // Barcode in the photo? Use the product's real label numbers from the online database.
+    const code = String(out.barcode ?? '').replace(/\D/g, '');
+    if (validBarcode(code)) {
+      const label = await lookupBarcode(code);
+      if (label) {
+        return reply(200, {
+          isFood: true,
+          name: label.name,
+          emoji: String(out.emoji).slice(0, 8) || '🍽️',
+          calories: label.calories,
+          protein: label.protein,
+          carbs: label.carbs,
+          fat: label.fat,
+          confidence: 'high',
+          from: 'database',
+          barcode: code,
+          serving: label.serving,
+        });
+      }
+    }
+
     return reply(200, {
       isFood: true,
       name: String(out.name).slice(0, 60),
@@ -161,6 +242,8 @@ Deno.serve(async (req) => {
       carbs: n(out.carbs),
       fat: n(out.fat),
       confidence: out.confidence,
+      from: 'ai',
+      barcode: validBarcode(code) ? code : undefined,
     });
   } catch (err) {
     await admin.rpc('refund_ai_analysis', { p_user: user.id });

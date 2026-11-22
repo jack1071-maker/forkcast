@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card, Headline, s } from '@/components/bits';
 import { FoodRow } from '@/components/screens/today';
 import { AppState, dayKey, entriesOn, parseDay, totals } from '@/lib/food';
-import { C, tapBuzz } from '@/lib/ui';
+import { ChevronIcon } from '@/components/icons';
+import { C, F, tapBuzz } from '@/lib/ui';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -46,7 +47,7 @@ export function History({ state }: { state: AppState }) {
       <Card>
         <View style={st.monthRow}>
           <Pressable onPress={() => shift(-1)} hitSlop={12} accessibilityLabel="Previous month">
-            <Text style={st.arrow}>‹</Text>
+            <ChevronIcon dir="left" size={22} color={C.text} />
           </Pressable>
           <Text style={st.month}>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</Text>
           <Pressable
@@ -54,7 +55,7 @@ export function History({ state }: { state: AppState }) {
             hitSlop={12}
             accessibilityLabel="Next month"
             style={{ opacity: isFutureMonth ? 0.25 : 1 }}>
-            <Text style={st.arrow}>›</Text>
+            <ChevronIcon size={22} color={C.text} />
           </Pressable>
         </View>
         <View style={st.grid}>
@@ -66,7 +67,7 @@ export function History({ state }: { state: AppState }) {
           {cells.map((c, i) => {
             if (!c) return <View key={i} style={st.cell} />;
             const kcal = perDay.get(c);
-            const bg = kcal == null ? 'transparent' : kcal > goal * 1.05 ? C.over : C.accent;
+            const bg = kcal == null ? 'transparent' : kcal > goal * 1.05 ? C.over : C.good;
             const future = c > today;
             const isSel = c === selected;
             return (
@@ -82,7 +83,7 @@ export function History({ state }: { state: AppState }) {
                   style={[
                     st.dot,
                     { backgroundColor: bg },
-                    c === today && kcal == null && { borderColor: C.accent, borderWidth: 1.5 },
+                    c === today && kcal == null && { borderColor: C.text, borderWidth: 1.5 },
                     isSel && { borderColor: C.text, borderWidth: 2 },
                   ]}>
                   <Text style={[st.dayNum, kcal != null && { color: C.onAccent }, future && { opacity: 0.3 }]}>
@@ -94,7 +95,7 @@ export function History({ state }: { state: AppState }) {
           })}
         </View>
         <View style={st.legend}>
-          <Legend color={C.accent} label="On target" />
+          <Legend color={C.good} label="On target" />
           <Legend color={C.over} label="Over" />
           <Text style={s.muted}>{loggedThisMonth} day{loggedThisMonth === 1 ? '' : 's'} logged</Text>
         </View>
@@ -131,13 +132,13 @@ function Legend({ color, label }: { color: string; label: string }) {
 const st = StyleSheet.create({
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  arrow: { color: C.accent, fontSize: 32, fontWeight: '600', paddingHorizontal: 8 },
-  month: { color: C.text, fontSize: 18, fontWeight: '700' },
+  arrow: { color: C.accent, fontSize: 32, fontFamily: F.semi, paddingHorizontal: 8 },
+  month: { color: C.text, fontSize: 18, fontFamily: F.bold },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  weekday: { width: `${100 / 7}%`, textAlign: 'center', color: C.muted, fontSize: 12, fontWeight: '700', paddingBottom: 6 },
+  weekday: { width: `${100 / 7}%`, textAlign: 'center', color: C.muted, fontSize: 12, fontFamily: F.bold, paddingBottom: 6 },
   cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dot: { width: '82%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  dayNum: { color: C.text, fontSize: 14, fontWeight: '700' },
+  dayNum: { color: C.text, fontSize: 14, fontFamily: F.bold },
   legend: { flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' },
-  section: { color: C.muted, fontSize: 13, fontWeight: '700', letterSpacing: 1, marginTop: 4 },
+  section: { color: C.muted, fontSize: 13, fontFamily: F.bold, letterSpacing: 1, marginTop: 4 },
 });

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CalendarIcon, CameraIcon, RingIcon, TrendIcon } from '@/components/icons';
 import { AuthScreen, NewPasswordScreen } from '@/components/screens/auth';
 import { History } from '@/components/screens/history';
 import { Progress, SyncStatus } from '@/components/screens/progress';
@@ -30,7 +31,7 @@ import {
   saveState,
 } from '@/lib/food';
 import { cloudEnabled, supabase } from '@/lib/supabase';
-import { C, doneBuzz, tapBuzz } from '@/lib/ui';
+import { C, F, doneBuzz, tapBuzz } from '@/lib/ui';
 import { useAccount } from '@/lib/use-account';
 
 type Tab = 'today' | 'history' | 'progress';
@@ -338,7 +339,7 @@ export default function App() {
         ) : null}
       </View>
       <View style={st.tabs}>
-        <TabButton icon="🍽️" label="Today" on={tab === 'today'} onPress={() => setTab('today')} />
+        <TabButton Icon={RingIcon} label="Today" on={tab === 'today'} onPress={() => setTab('today')} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Snap your food"
@@ -347,10 +348,10 @@ export default function App() {
             setOverlay('photo');
           }}
           style={({ pressed }) => [st.snap, pressed && { transform: [{ scale: 0.94 }] }]}>
-          <Text style={st.snapIcon}>📸</Text>
+          <CameraIcon size={26} color={C.onAccent} strokeWidth={2} />
         </Pressable>
-        <TabButton icon="📅" label="History" on={tab === 'history'} onPress={() => setTab('history')} />
-        <TabButton icon="📈" label="Progress" on={tab === 'progress'} onPress={() => setTab('progress')} />
+        <TabButton Icon={CalendarIcon} label="History" on={tab === 'history'} onPress={() => setTab('history')} />
+        <TabButton Icon={TrendIcon} label="Progress" on={tab === 'progress'} onPress={() => setTab('progress')} />
       </View>
     </Screen>
   );
@@ -366,7 +367,17 @@ function Screen({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TabButton({ icon, label, on, onPress }: { icon: string; label: string; on: boolean; onPress: () => void }) {
+function TabButton({
+  Icon,
+  label,
+  on,
+  onPress,
+}: {
+  Icon: (p: { size?: number; color?: string }) => React.JSX.Element;
+  label: string;
+  on: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="tab"
@@ -376,8 +387,8 @@ function TabButton({ icon, label, on, onPress }: { icon: string; label: string; 
         onPress();
       }}
       style={st.tab}>
-      <Text style={[st.tabIcon, { opacity: on ? 1 : 0.5 }]}>{icon}</Text>
-      <Text style={[st.tabLabel, { color: on ? C.accent : C.muted }]}>{label}</Text>
+      <Icon size={24} color={on ? C.text : C.muted} />
+      <Text style={[st.tabLabel, { color: on ? C.text : C.muted }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -390,14 +401,13 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: C.line,
+    borderTopColor: '#16171A',
     backgroundColor: C.bg,
     paddingTop: 8,
     paddingBottom: 4,
   },
   tab: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4 },
-  tabIcon: { fontSize: 22 },
-  tabLabel: { fontSize: 12, fontWeight: '700' },
+  tabLabel: { fontSize: 10, fontFamily: F.semi, letterSpacing: 1, textTransform: 'uppercase' },
   snap: {
     width: 60,
     height: 60,
@@ -410,5 +420,4 @@ const st = StyleSheet.create({
     borderWidth: 4,
     borderColor: C.bg,
   },
-  snapIcon: { fontSize: 26 },
 });

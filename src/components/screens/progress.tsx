@@ -5,7 +5,7 @@ import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
 
 import { Button, Card, Field, Headline, num, s } from '@/components/bits';
 import { AppState, addDays, dayKey, entriesOn, kgToLb, lbToKg, parseDay, showWeight, totals } from '@/lib/food';
-import { C } from '@/lib/ui';
+import { C, F } from '@/lib/ui';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
@@ -98,7 +98,7 @@ export function Progress({
       ? 'Backing up…'
       : account.sync === 'error'
         ? 'Couldn’t back up right now. It’s saved on this device and will retry.'
-        : 'Backed up ✓';
+        : 'Backed up';
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
@@ -192,7 +192,7 @@ export function Progress({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={s.muted}>{label}</Text>
+      <Text style={s.fieldLabel}>{label}</Text>
       <Text style={st.stat}>{value}</Text>
     </View>
   );
@@ -237,7 +237,7 @@ function WeekBars({ week, goal, width }: { week: { day: string; kcal: number }[]
               width={slot * 0.6}
               height={Math.max(bh, 2)}
               rx={6}
-              fill={d.kcal === 0 ? C.line : d.kcal > goal * 1.05 ? C.over : C.accent}
+              fill={d.kcal === 0 ? C.line : d.kcal > goal * 1.05 ? C.over : C.good}
             />
           );
         })}
@@ -257,8 +257,8 @@ function WeekBars({ week, goal, width }: { week: { day: string; kcal: number }[]
 const st = StyleSheet.create({
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   stats: { flexDirection: 'row', gap: 10 },
-  stat: { color: C.text, fontSize: 18, fontWeight: '800', marginTop: 2 },
-  error: { color: C.danger, fontSize: 14, textAlign: 'center' },
-  link: { color: C.accent, fontSize: 14, textAlign: 'center', paddingVertical: 6 },
-  barLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  stat: { color: C.text, fontSize: 26, fontFamily: F.head, marginTop: 4 },
+  error: { color: C.danger, fontFamily: F.body, fontSize: 14, textAlign: 'center' },
+  link: { color: C.accent, fontFamily: F.body, fontSize: 14, textAlign: 'center', paddingVertical: 6 },
+  barLabel: { flex: 1, textAlign: 'center', color: C.muted, fontSize: 12, fontFamily: F.bold, marginTop: 4 },
 });

@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { C, HEADLINE, R } from '@/lib/ui';
+import { C, F, R } from '@/lib/ui';
 
 const UPDATED = 'November 22, 2026';
 const CONTACT_URL = 'https://github.com/jack1071-maker/forkcast/issues';
@@ -35,6 +35,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       'When you snap or choose a photo for an estimate, a smaller copy is sent to our server and then to Anthropic (anthropic.com), whose Claude AI estimates the calories and macros. Forkcast does not save your photos; only the numbers you choose to add are kept.',
       'Anthropic handles the photo under its own commercial terms and privacy policy. Only take photos of food, not of people or anything private.',
+      'If the AI reads a barcode in your photo, only that barcode number is looked up in Open Food Facts (openfoodfacts.org), a free public food database, to get the product’s label nutrition. Nothing about you is sent with it.',
       'We also count how many photos each account analyzes per day, to keep the free service within its limits.',
     ],
   },
@@ -76,7 +77,7 @@ export default function PrivacyPolicy() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.wrap}>
         <Pressable onPress={goBack} style={styles.back}>
-          <Text style={styles.backText}>‹ Back</Text>
+          <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <Text style={styles.h1}>PRIVACY POLICY</Text>
         <Text style={styles.updated}>Last updated {UPDATED}</Text>
@@ -104,11 +105,11 @@ const styles = StyleSheet.create({
   screen: { flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', backgroundColor: C.bg },
   wrap: { padding: 20, gap: 12, paddingBottom: 40 },
   back: { alignSelf: 'flex-start', paddingVertical: 6 },
-  backText: { color: C.accent, fontSize: 16, fontWeight: '600' },
-  h1: { fontSize: 38, lineHeight: 46, fontFamily: HEADLINE, color: C.text },
-  updated: { color: C.muted, fontSize: 13, marginTop: -6 },
+  backText: { color: C.accent, fontSize: 16, fontFamily: F.semi },
+  h1: { fontSize: 38, lineHeight: 46, fontFamily: F.head, color: C.text },
+  updated: { color: C.muted, fontFamily: F.body, fontSize: 13, marginTop: -6 },
   card: { backgroundColor: C.card, borderRadius: R.md, padding: 16, gap: 8 },
-  h2: { fontSize: 17, fontWeight: '700', color: C.text },
-  p: { fontSize: 14, color: C.muted, lineHeight: 21 },
-  link: { color: C.accent, textAlign: 'center', fontSize: 14, paddingVertical: 8 },
+  h2: { fontSize: 17, fontFamily: F.bold, color: C.text },
+  p: { fontFamily: F.body, fontSize: 14, color: C.muted, lineHeight: 21 },
+  link: { color: C.accent, textAlign: 'center', fontFamily: F.body, fontSize: 14, paddingVertical: 8 },
 });

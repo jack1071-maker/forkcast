@@ -6,7 +6,8 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, V
 import { Button, Card, Field, Headline, num, s } from '@/components/bits';
 import { AnalyzeError, analyzePhoto } from '@/lib/analyze';
 import { Entry, Macros } from '@/lib/food';
-import { C, R, tapBuzz } from '@/lib/ui';
+import { BarcodeIcon, CameraIcon, CloseIcon, ForkIcon, KeyIcon, LockIcon, MinusIcon, PlusIcon } from '@/components/icons';
+import { C, F, R, tapBuzz } from '@/lib/ui';
 
 export type NewFood = Macros & { name: string; emoji: string; source: Entry['source'] };
 
@@ -37,6 +38,8 @@ export function Review({
   const [photo, setPhoto] = useState<string | null>(null);
   const [demo, setDemo] = useState(false);
   const [lowConfidence, setLowConfidence] = useState(false);
+  /** Set when the numbers came from a barcode match in the food database. */
+  const [match, setMatch] = useState<{ barcode: string; serving: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
@@ -91,7 +94,8 @@ export function Review({
       const guess = await analyzePhoto(uri, inviteCode);
       fill(guess);
       setDemo(guess.demo);
-      setLowConfidence(guess.confidence === 'low');
+      setLowConfidence(guess.confidence === 'low' && guess.from !== 'database');
+      setMatch(guess.from === 'database' && guess.barcode ? { barcode: guess.barcode, serving: guess.serving ?? '1 serving' } : null);
       setStep('edit');
     } catch (e) {
       const err = e instanceof AnalyzeError ? e : null;
@@ -127,7 +131,7 @@ export function Review({
       <View style={st.top}>
         <Headline size={30}>{mode === 'photo' ? 'SNAP YOUR FOOD' : 'ADD FOOD'}</Headline>
         <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">
-          <Text style={st.close}>✕</Text>
+          <CloseIcon size={22} color={C.muted} />
         </Pressable>
       </View>
 
@@ -136,8 +140,8 @@ export function Review({
       {step === 'account' ? (
         <>
           <Card style={{ alignItems: 'center', paddingVertical: 26 }}>
-            <Text style={{ fontSize: 56 }}>🔐</Text>
-            <Text style={[s.body, { textAlign: 'center', fontWeight: '700' }]}>Photo estimates need a free account</Text>
+            <View style={st.bigIcon}><LockIcon size={30} color={C.text} /></View>
+            <Text style={[s.body, { textAlign: 'center', fontFamily: F.bold }]}>Photo estimates need a free account</Text>
             <Text style={[s.muted, { textAlign: 'center' }]}>
               Sign up or sign in to use the AI. Your food log is backed up too, so you never lose it.
             </Text>
@@ -150,7 +154,10 @@ export function Review({
       {step === 'invite' ? (
         <>
           <Card>
-            <Text style={[s.body, { fontWeight: '700' }]}>🎟️ Enter your invite code</Text>
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              <KeyIcon size={20} color={C.text} />
+              <Text style={[s.body, { fontFamily: F.bold }]}>Enter your invite code</Text>
+            </View>
             <Text style={s.muted}>
               Forkcast&apos;s photo AI is invite-only for now. You only need to enter the code once.
             </Text>
@@ -165,9 +172,9 @@ export function Review({
       {step === 'pick' ? (
         <>
           <Card style={{ alignItems: 'center', paddingVertical: 30 }}>
-            <Text style={{ fontSize: 56 }}>📸</Text>
+            <View style={st.bigIcon}><CameraIcon size={30} color={C.text} /></View>
             <Text style={[s.body, { textAlign: 'center' }]}>
-              Take a photo of your meal and Forkcast estimates the calories and macros.
+              Snap your meal and Forkcast estimates the calories and macros. For packaged food, snap the barcode and we&apos;ll look up the exact label.
             </Text>
           </Card>
           <Button title="Take a photo" onPress={() => pick(true)} />
@@ -199,6 +206,13 @@ export function Review({
                 Sample estimate: the AI isn&apos;t connected in this copy. Edit anything that looks wrong.
               </Text>
             </View>
+          ) : match ? (
+            <View style={[st.demo, { flexDirection: 'row', gap: 10, alignItems: 'center' }]}>
+              <BarcodeIcon size={20} color={C.good} />
+              <Text style={[st.demoText, { flex: 1 }]}>
+                Barcode {match.barcode} found in the Open Food Facts database. Label values for {match.serving}.
+              </Text>
+            </View>
           ) : lowConfidence ? (
             <View style={st.demo}>
               <Text style={st.demoText}>Rough guess: this one was hard to see. Check the numbers.</Text>
@@ -218,7 +232,7 @@ export function Review({
                     }}
                     style={st.chip}>
                     <Text style={st.chipText}>
-                      {r.emoji} {r.name} · {r.calories}
+                      {r.name} · {r.calories}
                     </Text>
                   </Pressable>
                 ))}
@@ -228,7 +242,7 @@ export function Review({
 
           <Card>
             <View style={st.row}>
-              <Text style={{ fontSize: 34 }}>{emoji}</Text>
+              <View style={st.nameIcon}><ForkIcon size={20} color={C.text} /></View>
               <Field label="What is it?" value={name} onChange={setName} text placeholder="e.g. Turkey sandwich" style={{ flex: 1 }} />
             </View>
             <Field label="Calories (one serving)" value={cal} onChange={setCal} suffix="kcal" />
@@ -240,7 +254,7 @@ export function Review({
             <View style={[st.row, { justifyContent: 'space-between' }]}>
               <Text style={s.fieldLabel}>Servings</Text>
               <View style={st.row}>
-                <Stepper label="−" onPress={() => setServings((v) => Math.max(0.5, v - 0.5))} />
+                <Stepper label="-" onPress={() => setServings((v) => Math.max(0.5, v - 0.5))} />
                 <Text style={st.servings}>{servings}</Text>
                 <Stepper label="+" onPress={() => setServings((v) => Math.min(10, v + 0.5))} />
               </View>
@@ -262,7 +276,7 @@ export function Review({
               onAdd(food);
             }}
           />
-          {mode === 'photo' ? (
+          {mode === 'photo' && photo ? (
             <Button
               title="Retake photo"
               kind="ghost"
@@ -287,7 +301,7 @@ function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
       }}
       style={st.step}
       accessibilityLabel={label === '+' ? 'More servings' : 'Fewer servings'}>
-      <Text style={st.stepText}>{label}</Text>
+      {label === '+' ? <PlusIcon size={18} color={C.text} /> : <MinusIcon size={18} color={C.text} />}
     </Pressable>
   );
 }
@@ -296,16 +310,18 @@ function Stepper({ label, onPress }: { label: string; onPress: () => void }) {
 const st = StyleSheet.create({
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  close: { color: C.muted, fontSize: 24, padding: 4 },
+  close: { color: C.muted, fontFamily: F.body, fontSize: 24, padding: 4 },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: R.lg, backgroundColor: C.card },
-  error: { color: C.danger, fontSize: 15, textAlign: 'center' },
-  note: { color: C.muted, fontSize: 12, textAlign: 'center' },
+  error: { color: C.danger, fontFamily: F.body, fontSize: 15, textAlign: 'center' },
+  note: { color: C.muted, fontFamily: F.body, fontSize: 12, textAlign: 'center' },
   demo: { backgroundColor: C.accentSoft, borderRadius: R.sm, padding: 12 },
-  demoText: { color: C.accent, fontSize: 14, fontWeight: '600' },
+  demoText: { color: C.text, fontSize: 13, fontFamily: F.medium },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   chip: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: C.line },
-  chipText: { color: C.text, fontSize: 14, fontWeight: '600' },
-  servings: { color: C.text, fontSize: 20, fontWeight: '800', minWidth: 36, textAlign: 'center' },
+  chipText: { color: C.text, fontSize: 14, fontFamily: F.semi },
+  servings: { color: C.text, fontSize: 20, fontFamily: F.head, minWidth: 36, textAlign: 'center' },
   step: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
-  stepText: { color: C.accent, fontSize: 22, fontWeight: '800' },
+  stepText: { color: C.text, fontSize: 22, fontFamily: F.head },
+  bigIcon: { width: 64, height: 64, borderRadius: 20, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center' },
+  nameIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.cardHi, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
 });

@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Button, Card, Headline, s } from '@/components/bits';
 import { friendlyAuthError } from '@/lib/cloud';
 import { APP_URL, supabase } from '@/lib/supabase';
-import { C, R, doneBuzz } from '@/lib/ui';
+import { AlertIcon, CheckIcon, CloseIcon } from '@/components/icons';
+import { C, F, R, doneBuzz } from '@/lib/ui';
 
 type Mode = 'signUp' | 'signIn' | 'reset';
 
@@ -95,16 +96,16 @@ export function AuthScreen({
       <View style={st.top}>
         <Headline size={30}>{TITLES[mode]}</Headline>
         <Pressable onPress={onBack} hitSlop={12} accessibilityLabel="Close">
-          <Text style={st.close}>✕</Text>
+          <CloseIcon size={22} color={C.muted} />
         </Pressable>
       </View>
       <Text style={s.muted}>{LEADS[mode]}</Text>
 
       {hasLocalData && signingUp ? (
-        <Text style={st.info}>✅ The food already logged on this device will be saved to your new account.</Text>
+        <Notice Icon={CheckIcon} color={C.good} text="The food already logged on this device will be saved to your new account." />
       ) : null}
       {hasLocalData && mode === 'signIn' ? (
-        <Text style={st.info}>⚠️ Signing in replaces what&apos;s on this device with what&apos;s saved in your account.</Text>
+        <Notice Icon={AlertIcon} color={C.carbs} text="Signing in replaces what's on this device with what's saved in your account." />
       ) : null}
 
       <Card>
@@ -216,10 +217,20 @@ export function NewPasswordScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+function Notice({ Icon, color, text }: { Icon: (p: { size?: number; color?: string }) => React.JSX.Element; color: string; text: string }) {
+  return (
+    <View style={st.notice}>
+      <Icon size={18} color={color} />
+      <Text style={[s.muted, { flex: 1, fontSize: 14 }]}>{text}</Text>
+    </View>
+  );
+}
+
 const st = StyleSheet.create({
+  notice: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: C.card, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.line },
   wrap: { padding: 20, gap: 14, paddingBottom: 40 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  close: { color: C.muted, fontSize: 24, padding: 4 },
+  close: { color: C.muted, fontFamily: F.body, fontSize: 24, padding: 4 },
   input: {
     backgroundColor: C.cardHi,
     borderRadius: R.sm,
@@ -228,6 +239,6 @@ const st = StyleSheet.create({
     color: C.text,
     fontSize: 17,
   },
-  error: { color: C.danger, fontSize: 15, textAlign: 'center' },
-  info: { color: C.accent, fontSize: 15, textAlign: 'center' },
+  error: { color: C.danger, fontFamily: F.body, fontSize: 15, textAlign: 'center' },
+  info: { color: C.good, fontFamily: F.medium, fontSize: 14, textAlign: 'center' },
 });
