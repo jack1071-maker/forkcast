@@ -47,3 +47,13 @@ example
 .db-password
 
 .invite-code
+
+# promo video
+promo/node_modules/
+promo/out/
+
+# Blender files and render output (rebuilt by blender/phone.py)
+promo/blender/*.blend
+promo/blender/*.blend1
+promo/public/3d/
+promo/blender/screen-*.png

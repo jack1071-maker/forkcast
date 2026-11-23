@@ -44,6 +44,13 @@ Look (Ro-inspired, light; not a copy): warm off-white `#F6F5F2` background, whit
 - Icons: `python scripts/make-icons.py` redraws every icon size.
 - After a change works: commit + push, then phone update + web deploy so all three match.
 
+## Promo video (`promo/`)
+
+- 29.5 s vertical ad (1080 × 1920), storyboard in `promo/STORYBOARD-v2.md` (approved). 2D in Remotion (`promo/src/Promo.tsx`, all beat times in `src/beats.ts`), two 3D phone shots made in Blender 5.3 (`promo/blender/phone.py`, run with no window), sound generated in code (`promo/sound.mjs`, no samples). Followed the user's downloaded "saas-animation" skill's rules (storyboard first, shapes transform into each other, dead center, words rise from blur, one soft light).
+- The meal photo `promo/public/meal.jpg` is the user's own ravioli photo, cropped to the plate (no people) with location data removed.
+- This PC is Windows on ARM: Remotion can't download its browser or encode video here, so `remotion.config.ts` points at the installed Chrome and `render.mjs` renders JPEG frames then encodes with the x64 ffmpeg inside `@remotion/compositor-win32-x64-msvc` (installed with `--force`). Blender renders on the CPU only (~5 s/frame at `65 6 fast`).
+- Rebuild, in `promo/`: `npx.cmd remotion still ScreenSnap blender/screen-snap.png` (same for ScreenToday), then `& "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" -b -P blender/phone.py -- snap 65 6 fast` (and `end`), ~16 min total, then `npm.cmd run sound` and `npm.cmd run render` → `out/forkcast-promo.mp4`. Review frames with `node stills.mjs 4.8 9.3 ...`. Don't run PowerShell scripts with `-ExecutionPolicy Bypass`; run the commands inline.
+
 ## Next steps
 
 - Ideas: meal reminders (notifications, phone only), editable water goal, new README screenshots of the week strip / water / weekly summary, security audit, delete the unused `forkcast`/`forkcast-2` Anthropic keys.
