@@ -20,6 +20,12 @@ It gets its own icon and opens full screen like a normal app. You can log food b
   <img src="docs/screenshots/progress.jpg" width="180" alt="Progress screen: weight trend line and the last 7 days of calories" />
 </p>
 
+## Promo video
+
+<a href="docs/forkcast-promo.mp4"><img src="docs/promo-poster.jpg" width="240" alt="Promo video: a 3D phone showing Forkcast's camera screen with a plate of ravioli. Click to watch." /></a>
+
+**[▶ Watch the 30-second promo](docs/forkcast-promo.mp4)** (click, then the download or "View raw" button if it doesn't play right away). Made entirely in code: 2D motion graphics in [Remotion](https://www.remotion.dev), a 3D phone modeled and rendered in [Blender](https://www.blender.org) from a Python script, and a soundtrack generated from scratch. The source is in [`promo/`](promo).
+
 ## Features
 
 - **📸 Snap → estimate → add.** Take a photo (or pick one) and Claude AI names the food and estimates calories and macros. Everything is editable, with a servings stepper, before it goes in your log.
