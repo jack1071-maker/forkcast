@@ -22,6 +22,12 @@ It gets its own icon and opens full screen like a normal app. You can log food b
 
 ## Promo video
 
+
+
+https://github.com/user-attachments/assets/abffde26-53e9-4afe-96e8-2f38e49169b5
+
+
+
 <a href="https://jack1071-forkcast.expo.app/promo.mp4"><img src="docs/promo-poster.jpg" width="240" alt="Promo video: a 3D phone showing Forkcast's camera screen with a plate of ravioli. Click to watch." /></a>
 
 **[▶ Watch the 30-second promo](https://jack1071-forkcast.expo.app/promo.mp4)** (plays in your browser). Made entirely in code: 2D motion graphics in [Remotion](https://www.remotion.dev), a 3D phone modeled and rendered in [Blender](https://www.blender.org) from a Python script, and a soundtrack generated from scratch. The source is in [`promo/`](promo).
